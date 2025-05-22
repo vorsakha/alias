@@ -14,16 +14,26 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+model Creator {
+    id                String         @id @default(cuid())
+    username          String         @unique
+    displayName       String
+    bio               String?
+    avatarUrl         String?
+    lightningAddress  String?
+    websiteUrl        String?
+    theme             String?
+    xUsername         String?
+    instagramUsername String?
+    githubUsername    String?
+    facebookUsername  String?
+    email             String?
+    nostrPubkey       String?
+    createdAt         DateTime       @default(now())
+    userId            String         @unique
+    user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
-
-    @@index([name])
+    @@index([username])
 }
 
 // Necessary for Next auth
@@ -34,13 +44,13 @@ model Account {
     provider                 String
     providerAccountId        String
     refresh_token            String? // @db.Text
-    access_token             String? // @db.Text
-    expires_at               Int?
-    token_type               String?
-    scope                    String?
-    id_token                 String? // @db.Text
-    session_state            String?
-    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    access_token            String? // @db.Text
+    expires_at              Int?
+    token_type              String?
+    scope                   String?
+    id_token               String? // @db.Text
+    session_state           String?
+    user                    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
     refresh_token_expires_in Int?
 
     @@unique([provider, providerAccountId])
@@ -62,7 +72,7 @@ model User {
     image         String?
     accounts      Account[]
     sessions      Session[]
-    posts         Post[]
+    creator       Creator?
 }
 
 model VerificationToken {

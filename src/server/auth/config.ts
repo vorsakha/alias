@@ -1,6 +1,7 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
+import { env } from "@/env";
 
 import { db } from "@/server/db";
 
@@ -32,7 +33,10 @@ declare module "next-auth" {
  */
 export const authConfig = {
   providers: [
-    DiscordProvider,
+    DiscordProvider({
+      clientId: env.AUTH_DISCORD_ID,
+      clientSecret: env.AUTH_DISCORD_SECRET,
+    }),
     /**
      * ...add more providers here.
      *
@@ -52,5 +56,44 @@ export const authConfig = {
         id: user.id,
       },
     }),
+    signIn: async ({ user, account, profile }) => {
+      // Only proceed for Discord authentication
+      if (account?.provider !== "discord") return true;
+
+      try {
+        // Make sure we have a user id
+        if (!user.id) return true;
+
+        // Check if user exists
+        const existingUser = await db.user.findUnique({
+          where: { id: user.id },
+          include: { creator: true },
+        });
+
+        // If user exists but doesn't have a creator profile, create one
+        if (existingUser && !existingUser.creator) {
+          // Create a creator profile for the user
+          const emailPrefix = profile?.email?.split("@")[0];
+          const username = emailPrefix ?? `user${user.id.substring(0, 8)}`;
+
+          await db.creator.create({
+            data: {
+              username,
+              displayName: user.name ?? username,
+              avatarUrl: user.image,
+              userId: user.id,
+            },
+          });
+        }
+
+        // If this is a new user, the PrismaAdapter will create the User record
+        // We don't need to do anything special here as the adapter handles it
+
+        return true;
+      } catch (error) {
+        console.error("Error in signIn callback:", error);
+        return true; // Allow sign-in even if creator profile creation fails
+      }
+    },
   },
 } satisfies NextAuthConfig;

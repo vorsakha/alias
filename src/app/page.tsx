@@ -1,15 +1,19 @@
 import Link from "next/link";
-
-import { LatestPost } from "@/app/_components/post";
 import { auth } from "@/server/auth";
-import { api, HydrateClient } from "@/trpc/server";
+import { HydrateClient } from "@/trpc/server";
+import { db } from "@/server/db";
+import { Button } from "@/components/ui/button";
 
 export default async function Home() {
-  const hello = await api.post.hello({ text: "from tRPC" });
   const session = await auth();
+  let hasCreatorProfile = false;
 
   if (session?.user) {
-    void api.post.getLatest.prefetch();
+    const creator = await db.creator.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true },
+    });
+    hasCreatorProfile = !!creator;
   }
 
   return (
@@ -17,51 +21,60 @@ export default async function Home() {
       <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
         <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
           <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
-            Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
+            SatSip
           </h1>
+          <p className="text-center text-2xl">
+            Create your Lightning payment profile and receive Bitcoin tips
+            easily
+          </p>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
             <Link
               className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-              href="https://create.t3.gg/en/usage/first-steps"
-              target="_blank"
+              href={hasCreatorProfile ? "/creator/settings" : "/onboarding"}
             >
-              <h3 className="text-2xl font-bold">First Steps →</h3>
+              <h3 className="text-2xl font-bold">Creator Profile →</h3>
               <div className="text-lg">
-                Just the basics - Everything you need to know to set up your
-                database and authentication.
+                {hasCreatorProfile
+                  ? "Manage your creator profile and customize your page."
+                  : "Create your creator profile to start receiving Bitcoin tips."}
               </div>
             </Link>
+
             <Link
               className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-              href="https://create.t3.gg/en/introduction"
-              target="_blank"
+              href={session ? "/api/auth/signout" : "/api/auth/signin"}
             >
-              <h3 className="text-2xl font-bold">Documentation →</h3>
+              <h3 className="text-2xl font-bold">
+                {session ? "Sign Out →" : "Sign In →"}
+              </h3>
               <div className="text-lg">
-                Learn more about Create T3 App, the libraries it uses, and how
-                to deploy it.
+                {session
+                  ? `Currently signed in as ${session.user?.name ?? "User"}`
+                  : "Sign in to create or manage your creator profile."}
               </div>
             </Link>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-2xl text-white">
-              {hello ? hello.greeting : "Loading tRPC query..."}
-            </p>
 
-            <div className="flex flex-col items-center justify-center gap-4">
-              <p className="text-center text-2xl text-white">
-                {session && <span>Logged in as {session.user?.name}</span>}
-              </p>
-              <Link
-                href={session ? "/api/auth/signout" : "/api/auth/signin"}
-                className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
-              >
-                {session ? "Sign out" : "Sign in"}
+          {session && hasCreatorProfile && (
+            <div className="mt-8 flex flex-col items-center gap-4">
+              <Link href="/creator/settings">
+                <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
+                  Manage Your Profile
+                </Button>
               </Link>
             </div>
-          </div>
+          )}
 
-          {session?.user && <LatestPost />}
+          {session && !hasCreatorProfile && (
+            <div className="mt-8 flex flex-col items-center gap-4">
+              <Link href="/onboarding">
+                <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
+                  Complete Your Profile Setup
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </main>
     </HydrateClient>
