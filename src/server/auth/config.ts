@@ -76,12 +76,26 @@ export const authConfig = {
           const emailPrefix = profile?.email?.split("@")[0];
           const username = emailPrefix ?? `user${user.id.substring(0, 8)}`;
 
-          await db.creator.create({
+          const creator = await db.creator.create({
             data: {
               username,
               displayName: user.name ?? username,
               avatarUrl: user.image,
               userId: user.id,
+            },
+          });
+
+          // Create empty socials record
+          await db.socials.create({
+            data: {
+              creatorId: creator.id,
+            },
+          });
+
+          // Create empty wallets record
+          await db.wallets.create({
+            data: {
+              creatorId: creator.id,
             },
           });
         }

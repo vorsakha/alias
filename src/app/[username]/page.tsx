@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "@/trpc/react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
@@ -13,24 +13,57 @@ import {
   Mail,
   Clipboard,
   Check,
+  Link,
 } from "lucide-react";
+import { WalletType, type Wallets } from "@prisma/client";
+
+const getWalletDisplayName = (walletType: WalletType) => {
+  switch (walletType) {
+    case WalletType.LIGHTNING:
+      return "⚡ LIGHTNING NETWORK";
+    case WalletType.BITCOIN:
+      return "₿ BITCOIN CORE";
+    case WalletType.ETHEREUM:
+      return "Ξ ETHEREUM CHAIN";
+    case WalletType.SOLANA:
+      return "◎ SOLANA PROTOCOL";
+    case WalletType.DOGE:
+      return "Ð DOGECOIN NET";
+    case WalletType.MONERO:
+      return "ⓜ MONERO SECURE";
+    default:
+      return "⚡ LIGHTNING NETWORK";
+  }
+};
+
+const getQrValue = (wallets?: Wallets) => {
+  switch (wallets?.mainWallet) {
+    case WalletType.LIGHTNING:
+      return `lightning:${wallets?.lightningAddress}`;
+    case WalletType.BITCOIN:
+      return `bitcoin:${wallets?.bitcoinAddress}`;
+    case WalletType.ETHEREUM:
+      return `ethereum:${wallets?.ethereumAddress}`;
+    case WalletType.SOLANA:
+      return `solana:${wallets?.solanaAddress}`;
+    case WalletType.DOGE:
+      return `doge:${wallets?.dogeAddress}`;
+    case WalletType.MONERO:
+      return `monero:${wallets?.moneroAddress}`;
+    default:
+      return `lightning:${wallets?.lightningAddress}`;
+  }
+};
 
 export default function CreatorProfilePage() {
   const { username } = useParams<{ username: string }>();
-  const [qrValue, setQrValue] = useState<string>("");
   const [copied, setCopied] = useState(false);
 
   const { data: creator } = api.profiles.getByUsername.useQuery({ username });
 
-  useEffect(() => {
-    if (creator?.lightningAddress) {
-      setQrValue(`lightning:${creator.lightningAddress}`);
-    }
-  }, [creator]);
-
   const copyToClipboard = async () => {
-    if (creator?.lightningAddress) {
-      await navigator.clipboard.writeText(creator.lightningAddress);
+    if (creator?.wallets?.lightningAddress) {
+      await navigator.clipboard.writeText(creator.wallets.lightningAddress);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -64,26 +97,30 @@ export default function CreatorProfilePage() {
             />
           </div>
         )}
-
-        <h1 className="mb-3 text-xl font-medium tracking-wide text-gray-100">
-          {creator?.displayName}
+        <h1 className="flex flex-col items-center justify-center text-xl font-medium tracking-wide text-gray-100">
+          {creator?.displayName ?? "ANON_USER"}
+          <span className="mb-3 font-mono text-xs text-amber-400/80">
+            @{username}
+          </span>
         </h1>
-
         {creator?.bio && (
           <div className="mb-6 text-center text-xs leading-relaxed text-gray-400">
-            {creator.bio}{" "}
-            <p className="text-amber-400/70">brew.status: active</p>
+            {creator.bio}
           </div>
         )}
-
-        {creator?.lightningAddress && (
+        {creator?.wallets?.lightningAddress && (
           <div className="w-full rounded-lg bg-gray-900/70 p-4 text-center">
             <div className="mb-2 text-xs tracking-widest text-amber-400/80 uppercase">
-              Brew Support Protocol
+              {getWalletDisplayName(
+                creator?.wallets?.mainWallet ?? WalletType.LIGHTNING,
+              )}
+            </div>
+            <div className="font-mono text-xs text-amber-400/80">
+              ┌─ SCAN TO TIP ─┐
             </div>
             <div className="inline-block rounded-md bg-gray-800 p-3">
               <QRCodeSVG
-                value={qrValue}
+                value={getQrValue(creator?.wallets)}
                 size={150}
                 level="M"
                 fgColor="#fbbf24" // amber-400
@@ -92,7 +129,7 @@ export default function CreatorProfilePage() {
             </div>
             <div className="mt-2 flex items-center justify-center gap-2">
               <p className="font-mono text-xs text-gray-400">
-                {creator?.lightningAddress}
+                {creator?.wallets?.lightningAddress}
               </p>
               <button
                 onClick={copyToClipboard}
@@ -108,11 +145,10 @@ export default function CreatorProfilePage() {
             </div>
           </div>
         )}
-
         <div className="mt-6 flex w-full justify-center space-x-4">
-          {creator?.xUsername && (
+          {creator?.socials?.xUsername && (
             <a
-              href={`https://x.com/${creator.xUsername}`}
+              href={`https://x.com/${creator.socials.xUsername}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
@@ -121,9 +157,20 @@ export default function CreatorProfilePage() {
               <X size={16} />
             </a>
           )}
-          {creator?.instagramUsername && (
+          {creator?.websiteUrl && (
             <a
-              href={`https://instagram.com/${creator.instagramUsername}`}
+              href={creator.websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
+              title="Website Url"
+            >
+              <Link size={16} />
+            </a>
+          )}
+          {creator?.socials?.instagramUsername && (
+            <a
+              href={`https://instagram.com/${creator.socials.instagramUsername}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
@@ -132,9 +179,9 @@ export default function CreatorProfilePage() {
               <Instagram size={16} />
             </a>
           )}
-          {creator?.githubUsername && (
+          {creator?.socials?.githubUsername && (
             <a
-              href={`https://github.com/${creator.githubUsername}`}
+              href={`https://github.com/${creator.socials.githubUsername}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
@@ -143,9 +190,9 @@ export default function CreatorProfilePage() {
               <Github size={16} />
             </a>
           )}
-          {creator?.facebookUsername && (
+          {creator?.socials?.facebookUsername && (
             <a
-              href={`https://facebook.com/${creator.facebookUsername}`}
+              href={`https://facebook.com/${creator.socials.facebookUsername}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
@@ -154,18 +201,18 @@ export default function CreatorProfilePage() {
               <Facebook size={16} />
             </a>
           )}
-          {creator?.email && (
+          {creator?.socials?.email && (
             <a
-              href={`mailto:${creator.email}`}
+              href={`mailto:${creator.socials.email}`}
               className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
               title="Email"
             >
               <Mail size={16} />
             </a>
           )}
-          {creator?.nostrPubkey && (
+          {creator?.socials?.nostrPubkey && (
             <a
-              href={`nostr:${creator.nostrPubkey}`}
+              href={`nostr:${creator.socials.nostrPubkey}`}
               className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
               title="Nostr"
             >
@@ -185,7 +232,6 @@ export default function CreatorProfilePage() {
             </a>
           )}
         </div>
-
         <div className="mt-6 text-center">
           <Image
             src="/assets/logo.svg"

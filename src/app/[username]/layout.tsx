@@ -1,7 +1,6 @@
 "use client";
 
 import { api } from "@/trpc/react";
-import { Zap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -56,7 +55,7 @@ const ProfileLayout = ({ children }: { children: React.ReactNode }) => {
       {children}
       <footer className="flex items-center justify-center">
         <p className="absolute bottom-4 text-sm text-gray-400">
-          Brewed with <Zap color="#fbbf24" className="inline-block" /> by SatSip
+          Brewed with ⚡ by SatSip
         </p>
       </footer>
     </div>

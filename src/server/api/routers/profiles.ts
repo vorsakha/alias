@@ -3,6 +3,7 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "@/server/api/trpc";
+import { WalletType } from "@prisma/client";
 import { z } from "zod";
 
 export const profileUpdateSchema = z.object({
@@ -17,12 +18,20 @@ export const profileUpdateSchema = z.object({
     .optional()
     .nullable(),
   lightningAddress: z.string().optional().nullable(),
+  bitcoinAddress: z.string().optional().nullable(),
+  ethereumAddress: z.string().optional().nullable(),
+  solanaAddress: z.string().optional().nullable(),
+  dogeAddress: z.string().optional().nullable(),
+  moneroAddress: z.string().optional().nullable(),
+  mainWallet: z.nativeEnum(WalletType).optional().nullable(),
+  // Social information
   xUsername: z.string().optional().nullable(),
   instagramUsername: z.string().optional().nullable(),
   githubUsername: z.string().optional().nullable(),
   facebookUsername: z.string().optional().nullable(),
   email: z.string().email().optional().nullable(),
   nostrPubkey: z.string().optional().nullable(),
+  websiteUrl: z.string().url().optional().nullable(),
 });
 
 const profileCreateSchema = z.object({
@@ -33,8 +42,17 @@ const profileCreateSchema = z.object({
   displayName: z.string().min(2),
   bio: z.string().optional(),
   avatarUrl: z.string().url().optional().nullable(),
-  lightningAddress: z.string().optional().nullable(),
+  websiteUrl: z.string().url().optional().nullable(),
   theme: z.string().optional(),
+  // Wallet information
+  lightningAddress: z.string().optional().nullable(),
+  bitcoinAddress: z.string().optional().nullable(),
+  ethereumAddress: z.string().optional().nullable(),
+  solanaAddress: z.string().optional().nullable(),
+  dogeAddress: z.string().optional().nullable(),
+  moneroAddress: z.string().optional().nullable(),
+  mainWallet: z.nativeEnum(WalletType).optional().nullable(),
+  // Social information
   xUsername: z.string().optional().nullable(),
   instagramUsername: z.string().optional().nullable(),
   githubUsername: z.string().optional().nullable(),
@@ -88,24 +106,46 @@ export const profilesRouter = createTRPCRouter({
         throw new Error("User already has a profile");
       }
 
-      // Create profile
-      return ctx.db.creator.create({
+      // Create the creator first
+      const creator = await ctx.db.creator.create({
         data: {
           username: input.username,
           displayName: input.displayName,
           bio: input.bio ?? null,
           avatarUrl: input.avatarUrl,
-          lightningAddress: input.lightningAddress,
+          websiteUrl: input.websiteUrl,
           theme: input.theme,
+          userId,
+        },
+      });
+
+      // Create the socials
+      await ctx.db.socials.create({
+        data: {
+          creatorId: creator.id,
           xUsername: input.xUsername,
           instagramUsername: input.instagramUsername,
           githubUsername: input.githubUsername,
           facebookUsername: input.facebookUsername,
           email: input.email,
           nostrPubkey: input.nostrPubkey,
-          userId,
         },
       });
+
+      // Create the wallets
+      await ctx.db.wallets.create({
+        data: {
+          creatorId: creator.id,
+          lightningAddress: input.lightningAddress,
+          bitcoinAddress: input.bitcoinAddress,
+          ethereumAddress: input.ethereumAddress,
+          solanaAddress: input.solanaAddress,
+          dogeAddress: input.dogeAddress,
+          moneroAddress: input.moneroAddress,
+        },
+      });
+
+      return creator;
     }),
 
   list: publicProcedure.query(async ({ ctx }) => {
@@ -134,7 +174,24 @@ export const profilesRouter = createTRPCRouter({
         where: { username: input.username },
       });
 
-      return creator;
+      if (!creator) {
+        return null;
+      }
+
+      // Fetch socials and wallets separately
+      const socials = await ctx.db.socials.findUnique({
+        where: { creatorId: creator.id },
+      });
+
+      const wallets = await ctx.db.wallets.findUnique({
+        where: { creatorId: creator.id },
+      });
+
+      return {
+        ...creator,
+        socials,
+        wallets,
+      };
     }),
 
   getCurrentCreator: protectedProcedure.query(async ({ ctx }) => {
@@ -151,7 +208,20 @@ export const profilesRouter = createTRPCRouter({
       throw new Error("Creator profile not found");
     }
 
-    return creator;
+    // Fetch socials and wallets separately
+    const socials = await ctx.db.socials.findUnique({
+      where: { creatorId: creator.id },
+    });
+
+    const wallets = await ctx.db.wallets.findUnique({
+      where: { creatorId: creator.id },
+    });
+
+    return {
+      ...creator,
+      socials,
+      wallets,
+    };
   }),
 
   updateProfile: protectedProcedure
@@ -168,14 +238,30 @@ export const profilesRouter = createTRPCRouter({
         throw new Error("Creator profile not found");
       }
 
-      // Update profile
-      return ctx.db.creator.update({
+      // Update profile and related models
+      const updatedCreator = await ctx.db.creator.update({
         where: { id: creator.id },
         data: {
           displayName: input.displayName,
           bio: input.bio,
           avatarUrl: input.avatarUrl,
-          lightningAddress: input.lightningAddress,
+          websiteUrl: input.websiteUrl,
+        },
+      });
+
+      // Update socials
+      await ctx.db.socials.upsert({
+        where: { creatorId: creator.id },
+        create: {
+          creatorId: creator.id,
+          xUsername: input.xUsername,
+          instagramUsername: input.instagramUsername,
+          githubUsername: input.githubUsername,
+          facebookUsername: input.facebookUsername,
+          email: input.email,
+          nostrPubkey: input.nostrPubkey,
+        },
+        update: {
           xUsername: input.xUsername,
           instagramUsername: input.instagramUsername,
           githubUsername: input.githubUsername,
@@ -184,6 +270,45 @@ export const profilesRouter = createTRPCRouter({
           nostrPubkey: input.nostrPubkey,
         },
       });
+
+      // Update wallets
+      await ctx.db.wallets.upsert({
+        where: { creatorId: creator.id },
+        create: {
+          creatorId: creator.id,
+          lightningAddress: input.lightningAddress,
+          bitcoinAddress: input.bitcoinAddress,
+          ethereumAddress: input.ethereumAddress,
+          solanaAddress: input.solanaAddress,
+          dogeAddress: input.dogeAddress,
+          moneroAddress: input.moneroAddress,
+          mainWallet: input.mainWallet,
+        },
+        update: {
+          lightningAddress: input.lightningAddress,
+          bitcoinAddress: input.bitcoinAddress,
+          ethereumAddress: input.ethereumAddress,
+          solanaAddress: input.solanaAddress,
+          dogeAddress: input.dogeAddress,
+          moneroAddress: input.moneroAddress,
+          mainWallet: input.mainWallet,
+        },
+      });
+
+      // Fetch updated socials and wallets
+      const socials = await ctx.db.socials.findUnique({
+        where: { creatorId: creator.id },
+      });
+
+      const wallets = await ctx.db.wallets.findUnique({
+        where: { creatorId: creator.id },
+      });
+
+      return {
+        ...updatedCreator,
+        socials,
+        wallets,
+      };
     }),
 
   updateProfileExtras: protectedProcedure

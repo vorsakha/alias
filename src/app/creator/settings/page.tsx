@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/trpc/react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,32 +32,88 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { themeOptions } from "@/app/_constants/theme";
+import { WalletType } from "@prisma/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const profileFormSchema = z.object({
-  displayName: z
-    .string()
-    .min(2, { message: "Display name must be at least 2 characters." }),
-  bio: z.string().optional(),
-  avatarUrl: z
-    .string()
-    .url({ message: "Please enter a valid URL." })
-    .optional()
-    .nullable(),
-  lightningAddress: z.string().optional().nullable(),
-  xUsername: z.string().optional().nullable(),
-  instagramUsername: z.string().optional().nullable(),
-  githubUsername: z.string().optional().nullable(),
-  facebookUsername: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable(),
-  nostrPubkey: z.string().optional().nullable(),
-});
+const profileFormSchema = z
+  .object({
+    displayName: z
+      .string()
+      .min(2, { message: "Display name must be at least 2 characters." }),
+    bio: z.string().optional(),
+    avatarUrl: z
+      .string()
+      .url({ message: "Please enter a valid URL." })
+      .optional()
+      .nullable(),
+    // socials
+    xUsername: z.string().optional().nullable(),
+    instagramUsername: z.string().optional().nullable(),
+    githubUsername: z.string().optional().nullable(),
+    facebookUsername: z.string().optional().nullable(),
+    email: z
+      .string()
+      .email()
+      .or(z.literal(""))
+      .optional()
+      .nullable()
+      .transform((val) => (val === "" ? null : val)),
+    nostrPubkey: z.string().optional().nullable(),
+    // wallets
+    lightningAddress: z.string().optional().nullable(),
+    bitcoinAddress: z.string().optional().nullable(),
+    ethereumAddress: z.string().optional().nullable(),
+    solanaAddress: z.string().optional().nullable(),
+    dogeAddress: z.string().optional().nullable(),
+    moneroAddress: z.string().optional().nullable(),
+    mainWallet: z.nativeEnum(WalletType),
+  })
+  .refine(
+    (data) => {
+      const walletAddresses = [
+        data.lightningAddress,
+        data.bitcoinAddress,
+        data.ethereumAddress,
+        data.solanaAddress,
+        data.dogeAddress,
+        data.moneroAddress,
+      ];
+
+      return walletAddresses.some((address) => address && address.length > 0);
+    },
+    {
+      message: "At least one wallet address is required",
+      path: ["lightningAddress"],
+    },
+  );
+
+const walletFields: {
+  field: keyof ProfileFormValues;
+  label: string;
+  type: WalletType;
+}[] = [
+  { field: "lightningAddress", label: "Lightning", type: WalletType.LIGHTNING },
+  { field: "bitcoinAddress", label: "Bitcoin", type: WalletType.BITCOIN },
+  { field: "ethereumAddress", label: "Ethereum", type: WalletType.ETHEREUM },
+  { field: "solanaAddress", label: "Solana", type: WalletType.SOLANA },
+  { field: "dogeAddress", label: "Doge", type: WalletType.DOGE },
+  { field: "moneroAddress", label: "Monero", type: WalletType.MONERO },
+];
 
 const websiteFormSchema = z.object({
   websiteUrl: z
     .string()
     .url({ message: "Please enter a valid URL." })
+    .or(z.literal(""))
     .optional()
-    .nullable(),
+    .nullable()
+    .transform((val) => (val === "" ? null : val)),
   themeOption: z.string(),
   customTheme: z.string().optional(),
 });
@@ -106,13 +162,19 @@ export default function CreatorSettings() {
         displayName: creator.displayName,
         bio: creator.bio ?? "",
         avatarUrl: creator.avatarUrl ?? "",
-        lightningAddress: creator.lightningAddress ?? "",
-        xUsername: creator.xUsername ?? "",
-        instagramUsername: creator.instagramUsername ?? "",
-        githubUsername: creator.githubUsername ?? "",
-        facebookUsername: creator.facebookUsername ?? "",
-        email: creator.email ?? "",
-        nostrPubkey: creator.nostrPubkey ?? "",
+        lightningAddress: creator.wallets?.lightningAddress ?? "",
+        xUsername: creator.socials?.xUsername ?? "",
+        instagramUsername: creator.socials?.instagramUsername ?? "",
+        githubUsername: creator.socials?.githubUsername ?? "",
+        facebookUsername: creator.socials?.facebookUsername ?? "",
+        email: creator.socials?.email ?? null,
+        nostrPubkey: creator.socials?.nostrPubkey ?? "",
+        bitcoinAddress: creator.wallets?.bitcoinAddress ?? "",
+        ethereumAddress: creator.wallets?.ethereumAddress ?? "",
+        solanaAddress: creator.wallets?.solanaAddress ?? "",
+        dogeAddress: creator.wallets?.dogeAddress ?? "",
+        moneroAddress: creator.wallets?.moneroAddress ?? "",
+        mainWallet: creator.wallets?.mainWallet ?? undefined,
       });
 
       const currentTheme = creator.theme ?? themeOptions?.[0]?.value ?? "";
@@ -127,6 +189,39 @@ export default function CreatorSettings() {
       });
     }
   }, [creator, profileForm, websiteForm]);
+
+  const currentMainWallet = profileForm.watch("mainWallet");
+  useEffect(() => {
+    if (!currentMainWallet) return;
+
+    const walletTypeToField: Record<WalletType, keyof ProfileFormValues> = {
+      [WalletType.LIGHTNING]: "lightningAddress",
+      [WalletType.BITCOIN]: "bitcoinAddress",
+      [WalletType.ETHEREUM]: "ethereumAddress",
+      [WalletType.SOLANA]: "solanaAddress",
+      [WalletType.DOGE]: "dogeAddress",
+      [WalletType.MONERO]: "moneroAddress",
+    };
+
+    const correspondingField = walletTypeToField[currentMainWallet];
+    const addressValue = profileForm.watch(correspondingField);
+
+    if (!addressValue || addressValue.length === 0) {
+      profileForm.setValue("mainWallet", undefined as unknown as WalletType);
+    }
+  }, [currentMainWallet, profileForm]);
+
+  const walletValues = profileForm.watch(walletFields.map((w) => w.field));
+  const walletsOptions = useMemo(
+    () =>
+      walletFields
+        .filter((_, i) => walletValues[i]?.length ?? 0 > 0)
+        .map((wallet) => ({
+          label: wallet.label,
+          value: wallet.type,
+        })),
+    [walletValues],
+  );
 
   const profileMutation = api.profiles.updateProfile.useMutation({
     onSuccess: () => {
@@ -313,29 +408,179 @@ export default function CreatorSettings() {
                     )}
                   />
 
-                  <FormField
-                    control={profileForm.control}
-                    name="lightningAddress"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Lightning Address</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="your@lightning.address"
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Your Lightning address for receiving payments (e.g.
-                          you@getalby.com).
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <h3 className="mb-1 pt-4 text-lg font-medium">Wallets</h3>
+                  <p className="text-muted-foreground mb-4 text-sm">
+                    Add your wallets to your profile.
+                  </p>
 
-                  <h3 className="pt-4 text-lg font-medium">Social Media</h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={profileForm.control}
+                      name="lightningAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Lightning Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="your@lightning.address"
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Your Lightning address for receiving payments (e.g.
+                            you@getalby.com).
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={profileForm.control}
+                      name="bitcoinAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bitcoin Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="bc1..."
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Your Bitcoin address for receiving payments.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={profileForm.control}
+                      name="ethereumAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ethereum Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="0x..."
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Your Ethereum address for receiving payments.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={profileForm.control}
+                      name="solanaAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Solana Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="..."
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Your Solana address for receiving payments.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={profileForm.control}
+                      name="dogeAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Doge Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="..."
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Your Doge address for receiving payments.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={profileForm.control}
+                      name="moneroAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Monero Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="..."
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Your Monero address for receiving payments.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={profileForm.control}
+                      name="mainWallet"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Highlighted Wallet</FormLabel>
+                          <FormControl>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value ?? undefined}
+                              disabled={profileMutation.isPending}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select the wallet to showcase in your profile" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {walletsOptions.map((option) => (
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                                {!walletsOptions.length && (
+                                  <SelectItem value="none" disabled>
+                                    No wallet selected
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <h3 className="mb-1 pt-4 text-lg font-medium">
+                    Social Media
+                  </h3>
                   <p className="text-muted-foreground mb-4 text-sm">
                     Connect your social media accounts to your profile.
                   </p>

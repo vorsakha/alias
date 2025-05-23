@@ -14,26 +14,55 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
+enum WalletType {
+    LIGHTNING
+    BITCOIN
+    ETHEREUM
+    SOLANA
+    DOGE
+    MONERO
+}
+
 model Creator {
     id                String         @id @default(cuid())
     username          String         @unique
     displayName       String
     bio               String?
     avatarUrl         String?
-    lightningAddress  String?
     websiteUrl        String?
     theme             String?
+    createdAt         DateTime       @default(now())
+    userId            String         @unique
+    user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    socials           Socials[]
+    wallets           Wallets[]
+
+    @@index([username])
+}
+
+model Socials {
+    id                String         @id @default(cuid())
+    creatorId         String         @unique
+    creator           Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
     xUsername         String?
     instagramUsername String?
     githubUsername    String?
     facebookUsername  String?
     email             String?
     nostrPubkey       String?
-    createdAt         DateTime       @default(now())
-    userId            String         @unique
-    user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-    @@index([username])
+model Wallets {
+    id                String         @id @default(cuid())
+    creatorId         String         @unique
+    creator           Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+    lightningAddress  String?
+    bitcoinAddress    String?
+    ethereumAddress   String?
+    solanaAddress     String?
+    dogeAddress       String?
+    moneroAddress     String?
+    mainWallet        WalletType?   @default(LIGHTNING)
 }
 
 // Necessary for Next auth
