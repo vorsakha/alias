@@ -85,13 +85,6 @@ export const authConfig = {
             },
           });
 
-          // Create empty socials record
-          await db.socials.create({
-            data: {
-              creatorId: creator.id,
-            },
-          });
-
           // Create empty wallets record
           await db.wallets.create({
             data: {

@@ -5,6 +5,7 @@ import {
 } from "@/server/api/trpc";
 import { WalletType } from "@prisma/client";
 import { z } from "zod";
+import { utapi, extractFileKeyFromUrl } from "@/server/uploadthing";
 
 export const profileUpdateSchema = z.object({
   displayName: z
@@ -52,6 +53,13 @@ export const profileUpdateSchema = z.object({
       }),
     )
     .optional()
+    .nullable(),
+});
+
+export const avatarUpdateSchema = z.object({
+  avatarUrl: z
+    .string()
+    .url({ message: "Please enter a valid URL." })
     .nullable(),
 });
 
@@ -278,6 +286,8 @@ export const profilesRouter = createTRPCRouter({
         throw new Error("Creator profile not found");
       }
 
+      const oldAvatarUrl = creator.avatarUrl;
+
       const updatedCreator = await ctx.db.creator.update({
         where: { id: creator.id },
         data: {
@@ -286,6 +296,18 @@ export const profilesRouter = createTRPCRouter({
           avatarUrl: input.avatarUrl,
         },
       });
+
+      if (oldAvatarUrl && oldAvatarUrl !== input.avatarUrl) {
+        const fileKey = extractFileKeyFromUrl(oldAvatarUrl);
+        if (fileKey) {
+          try {
+            await utapi.deleteFiles(fileKey);
+            console.log(`Successfully deleted old avatar: ${fileKey}`);
+          } catch (error) {
+            console.error(`Failed to delete old avatar: ${fileKey}`, error);
+          }
+        }
+      }
 
       await ctx.db.wallets.upsert({
         where: { creatorId: creator.id },
@@ -378,5 +400,50 @@ export const profilesRouter = createTRPCRouter({
           theme: input.theme,
         },
       });
+    }),
+
+  updateAvatar: protectedProcedure
+    .input(avatarUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const creator = await ctx.db.creator.findUnique({
+        where: { userId },
+      });
+
+      if (!creator) {
+        throw new Error("Creator profile not found");
+      }
+
+      const oldAvatarUrl = creator.avatarUrl;
+
+      const updatedCreator = await ctx.db.creator.update({
+        where: { id: creator.id },
+        data: {
+          avatarUrl: input.avatarUrl,
+        },
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          avatarUrl: true,
+          bio: true,
+          theme: true,
+        },
+      });
+
+      if (oldAvatarUrl && oldAvatarUrl !== input.avatarUrl) {
+        const fileKey = extractFileKeyFromUrl(oldAvatarUrl);
+        if (fileKey) {
+          try {
+            await utapi.deleteFiles(fileKey);
+            console.log(`Successfully deleted old avatar: ${fileKey}`);
+          } catch (error) {
+            console.error(`Failed to delete old avatar: ${fileKey}`, error);
+          }
+        }
+      }
+
+      return updatedCreator;
     }),
 });

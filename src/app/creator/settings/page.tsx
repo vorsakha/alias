@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
+import { useUploadThing } from "@/utils/uploadthing";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +30,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { themeOptions } from "@/app/_constants/theme";
@@ -45,6 +45,7 @@ import { Trash2, GripVertical, Plus, Loader2 } from "lucide-react";
 import type { Metadata } from "@/app/api/url-metadata/route";
 import Image from "next/image";
 import { useDragAndDrop } from "@/hooks/use-drag-and-drop";
+import { AvatarUploadHover } from "@/components/avatar-upload-hover";
 
 const profileFormSchema = z
   .object({
@@ -142,6 +143,9 @@ export default function CreatorSettings() {
   const [activeTab, setActiveTab] = useState("profile");
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [isAddingLink, setIsAddingLink] = useState(false);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(
+    null,
+  );
   const {
     draggedIndex,
     dragOverIndex,
@@ -271,6 +275,15 @@ export default function CreatorSettings() {
     },
   });
 
+  const { startUpload, isUploading: isUploadingAvatar } = useUploadThing(
+    "avatarUploader",
+    {
+      onUploadError: (error: Error) => {
+        toast.error(`Avatar upload failed: ${error.message}`);
+      },
+    },
+  );
+
   async function fetchUrlMetadata(url: string): Promise<Metadata> {
     const response = await fetch("/api/url-metadata", {
       method: "POST",
@@ -355,8 +368,25 @@ export default function CreatorSettings() {
     [draggedIndex, clearDragState, profileForm],
   );
 
-  function onProfileSubmit(data: ProfileFormValues) {
-    profileMutation.mutate(data);
+  async function onProfileSubmit(data: ProfileFormValues) {
+    try {
+      const finalData = { ...data };
+
+      if (selectedAvatarFile) {
+        const uploadResult = await startUpload([selectedAvatarFile]);
+        if (uploadResult?.[0]?.url) {
+          finalData.avatarUrl = uploadResult[0].url;
+        } else {
+          toast.error("Failed to upload avatar");
+          return;
+        }
+      }
+
+      profileMutation.mutate(finalData);
+      setSelectedAvatarFile(null);
+    } catch {
+      toast.error("Failed to update profile");
+    }
   }
 
   function onWebsiteSubmit(data: WebsiteFormValues) {
@@ -442,22 +472,27 @@ export default function CreatorSettings() {
                   className="space-y-6"
                 >
                   <div className="flex items-center space-x-4">
-                    <Avatar className="h-24 w-24">
-                      <AvatarImage src={profileForm.watch("avatarUrl") ?? ""} />
-                      <AvatarFallback>
-                        {creator?.displayName?.substring(0, 2).toUpperCase() ??
-                          ""}
-                      </AvatarFallback>
-                    </Avatar>
+                    <AvatarUploadHover
+                      currentAvatarUrl={profileForm.watch("avatarUrl")}
+                      displayName={creator?.displayName}
+                      onFileSelected={(file) => {
+                        setSelectedAvatarFile(file);
+                      }}
+                      className="h-24 w-24"
+                      disabled={profileMutation.isPending || isUploadingAvatar}
+                    />
                     <div>
                       <h3 className="text-lg font-medium">
                         @{creator?.username ?? "unknown"}
                       </h3>
-                      <p className="text-muted-foreground text-sm">
-                        Your profile URL:{" "}
-                        {typeof window !== "undefined"
-                          ? `${window.location.origin}/${creator?.username ?? "unknown"}`
-                          : `/${creator?.username ?? "unknown"}`}
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Click on your avatar to change it
+                        {selectedAvatarFile && (
+                          <span className="text-blue-600">
+                            {" "}
+                            (New image selected - save to upload)
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -495,27 +530,6 @@ export default function CreatorSettings() {
                         <FormDescription>
                           A short bio about yourself. This will be displayed on
                           your profile.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={profileForm.control}
-                    name="avatarUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Avatar URL</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="https://example.com/avatar.jpg"
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          A URL to your profile image.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -806,8 +820,13 @@ export default function CreatorSettings() {
                     </div>
                   )}
 
-                  <Button type="submit" disabled={profileMutation.isPending}>
-                    {profileMutation.isPending ? "Saving..." : "Save Profile"}
+                  <Button
+                    type="submit"
+                    disabled={profileMutation.isPending || isUploadingAvatar}
+                  >
+                    {profileMutation.isPending || isUploadingAvatar
+                      ? "Saving..."
+                      : "Save Profile"}
                   </Button>
                 </form>
               </Form>
