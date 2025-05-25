@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
-  { params }: { params: { username: string } },
+  { params }: { params: Promise<{ username: string }> },
 ) {
   try {
-    const { username } = params;
+    const { username } = await params;
 
     const creator = await db.creator.findUnique({
       where: {
@@ -20,7 +20,8 @@ export async function GET(
 
     return NextResponse.json(creator);
   } catch (error) {
-    console.error(`Error fetching creator ${params.username}:`, error);
+    const resolvedParams = await params;
+    console.error(`Error fetching creator ${resolvedParams.username}:`, error);
     return NextResponse.json(
       { error: "Failed to fetch creator" },
       { status: 500 },

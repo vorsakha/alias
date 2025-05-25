@@ -24,14 +24,35 @@ export const profileUpdateSchema = z.object({
   dogeAddress: z.string().optional().nullable(),
   moneroAddress: z.string().optional().nullable(),
   mainWallet: z.nativeEnum(WalletType).optional().nullable(),
-  // Social information
-  xUsername: z.string().optional().nullable(),
-  instagramUsername: z.string().optional().nullable(),
-  githubUsername: z.string().optional().nullable(),
-  facebookUsername: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable(),
-  nostrPubkey: z.string().optional().nullable(),
-  websiteUrl: z.string().url().optional().nullable(),
+  links: z
+    .array(
+      z.object({
+        title: z.string(),
+        url: z.string().url(),
+        type: z.string(),
+        description: z.string().optional().nullable(),
+        imageUrl: z.string().optional().nullable(),
+        icon: z.string().optional().nullable(),
+        siteName: z.string().optional().nullable(),
+        author: z.string().optional().nullable(),
+        canonical: z.string().optional().nullable(),
+        themeColor: z.string().optional().nullable(),
+        publishedTime: z.string().optional().nullable(),
+        modifiedTime: z.string().optional().nullable(),
+        videoUrl: z.string().optional().nullable(),
+        audioUrl: z.string().optional().nullable(),
+        album: z.string().optional().nullable(),
+        artist: z.string().optional().nullable(),
+        genre: z.string().optional().nullable(),
+        releaseDate: z.string().optional().nullable(),
+        imageWidth: z.number().optional().nullable(),
+        imageHeight: z.number().optional().nullable(),
+        position: z.number().optional(),
+        isActive: z.boolean().optional(),
+      }),
+    )
+    .optional()
+    .nullable(),
 });
 
 const profileCreateSchema = z.object({
@@ -44,7 +65,6 @@ const profileCreateSchema = z.object({
   avatarUrl: z.string().url().optional().nullable(),
   websiteUrl: z.string().url().optional().nullable(),
   theme: z.string().optional(),
-  // Wallet information
   lightningAddress: z.string().optional().nullable(),
   bitcoinAddress: z.string().optional().nullable(),
   ethereumAddress: z.string().optional().nullable(),
@@ -52,17 +72,38 @@ const profileCreateSchema = z.object({
   dogeAddress: z.string().optional().nullable(),
   moneroAddress: z.string().optional().nullable(),
   mainWallet: z.nativeEnum(WalletType).optional().nullable(),
-  // Social information
-  xUsername: z.string().optional().nullable(),
-  instagramUsername: z.string().optional().nullable(),
-  githubUsername: z.string().optional().nullable(),
-  facebookUsername: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable(),
-  nostrPubkey: z.string().optional().nullable(),
+  links: z
+    .array(
+      z.object({
+        title: z.string(),
+        url: z.string().url(),
+        type: z.string(),
+        description: z.string().optional().nullable(),
+        imageUrl: z.string().optional().nullable(),
+        icon: z.string().optional().nullable(),
+        siteName: z.string().optional().nullable(),
+        author: z.string().optional().nullable(),
+        canonical: z.string().optional().nullable(),
+        themeColor: z.string().optional().nullable(),
+        publishedTime: z.string().optional().nullable(),
+        modifiedTime: z.string().optional().nullable(),
+        videoUrl: z.string().optional().nullable(),
+        audioUrl: z.string().optional().nullable(),
+        album: z.string().optional().nullable(),
+        artist: z.string().optional().nullable(),
+        genre: z.string().optional().nullable(),
+        releaseDate: z.string().optional().nullable(),
+        imageWidth: z.number().optional().nullable(),
+        imageHeight: z.number().optional().nullable(),
+        position: z.number().optional(),
+        isActive: z.boolean().optional(),
+      }),
+    )
+    .optional()
+    .nullable(),
 });
 
 export const profilesRouter = createTRPCRouter({
-  // Check if current user has a profile
   hasProfile: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
     if (!userId) return false;
@@ -75,18 +116,15 @@ export const profilesRouter = createTRPCRouter({
     return !!creator;
   }),
 
-  // Get current session info
   getSession: protectedProcedure.query(({ ctx }) => {
     return ctx.session;
   }),
 
-  // Create a new profile
   createProfile: protectedProcedure
     .input(profileCreateSchema)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
-      // Check if username is already taken
       const existingUsername = await ctx.db.creator.findUnique({
         where: { username: input.username },
         select: { id: true },
@@ -96,7 +134,6 @@ export const profilesRouter = createTRPCRouter({
         throw new Error("Username already taken");
       }
 
-      // Check if user already has a profile
       const existingProfile = await ctx.db.creator.findUnique({
         where: { userId },
         select: { id: true },
@@ -106,33 +143,17 @@ export const profilesRouter = createTRPCRouter({
         throw new Error("User already has a profile");
       }
 
-      // Create the creator first
       const creator = await ctx.db.creator.create({
         data: {
           username: input.username,
           displayName: input.displayName,
           bio: input.bio ?? null,
           avatarUrl: input.avatarUrl,
-          websiteUrl: input.websiteUrl,
           theme: input.theme,
           userId,
         },
       });
 
-      // Create the socials
-      await ctx.db.socials.create({
-        data: {
-          creatorId: creator.id,
-          xUsername: input.xUsername,
-          instagramUsername: input.instagramUsername,
-          githubUsername: input.githubUsername,
-          facebookUsername: input.facebookUsername,
-          email: input.email,
-          nostrPubkey: input.nostrPubkey,
-        },
-      });
-
-      // Create the wallets
       await ctx.db.wallets.create({
         data: {
           creatorId: creator.id,
@@ -145,6 +166,38 @@ export const profilesRouter = createTRPCRouter({
         },
       });
 
+      if (Array.isArray(input.links)) {
+        for (const [i, link] of input.links.entries()) {
+          await ctx.db.link.create({
+            data: {
+              creatorId: creator.id,
+              title: link.title,
+              url: link.url,
+              type: link.type || "link",
+              description: link.description,
+              imageUrl: link.imageUrl,
+              icon: link.icon,
+              siteName: link.siteName,
+              author: link.author,
+              canonical: link.canonical,
+              themeColor: link.themeColor,
+              publishedTime: link.publishedTime,
+              modifiedTime: link.modifiedTime,
+              videoUrl: link.videoUrl,
+              audioUrl: link.audioUrl,
+              album: link.album,
+              artist: link.artist,
+              genre: link.genre,
+              releaseDate: link.releaseDate,
+              imageWidth: link.imageWidth,
+              imageHeight: link.imageHeight,
+              isActive: link.isActive ?? true,
+              position: i,
+            },
+          });
+        }
+      }
+
       return creator;
     }),
 
@@ -156,7 +209,6 @@ export const profilesRouter = createTRPCRouter({
         displayName: true,
         avatarUrl: true,
         bio: true,
-        websiteUrl: true,
         theme: true,
       },
       orderBy: {
@@ -172,26 +224,17 @@ export const profilesRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const creator = await ctx.db.creator.findUnique({
         where: { username: input.username },
+        include: {
+          wallets: true,
+          links: {
+            orderBy: {
+              position: "asc",
+            },
+          },
+        },
       });
 
-      if (!creator) {
-        return null;
-      }
-
-      // Fetch socials and wallets separately
-      const socials = await ctx.db.socials.findUnique({
-        where: { creatorId: creator.id },
-      });
-
-      const wallets = await ctx.db.wallets.findUnique({
-        where: { creatorId: creator.id },
-      });
-
-      return {
-        ...creator,
-        socials,
-        wallets,
-      };
+      return creator ?? null;
     }),
 
   getCurrentCreator: protectedProcedure.query(async ({ ctx }) => {
@@ -202,26 +245,21 @@ export const profilesRouter = createTRPCRouter({
 
     const creator = await ctx.db.creator.findUnique({
       where: { userId },
+      include: {
+        wallets: true,
+        links: {
+          orderBy: {
+            position: "asc",
+          },
+        },
+      },
     });
 
     if (!creator) {
       throw new Error("Creator profile not found");
     }
 
-    // Fetch socials and wallets separately
-    const socials = await ctx.db.socials.findUnique({
-      where: { creatorId: creator.id },
-    });
-
-    const wallets = await ctx.db.wallets.findUnique({
-      where: { creatorId: creator.id },
-    });
-
-    return {
-      ...creator,
-      socials,
-      wallets,
-    };
+    return creator;
   }),
 
   updateProfile: protectedProcedure
@@ -229,7 +267,6 @@ export const profilesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
-      // Find creator profile
       const creator = await ctx.db.creator.findUnique({
         where: { userId },
       });
@@ -238,40 +275,15 @@ export const profilesRouter = createTRPCRouter({
         throw new Error("Creator profile not found");
       }
 
-      // Update profile and related models
       const updatedCreator = await ctx.db.creator.update({
         where: { id: creator.id },
         data: {
           displayName: input.displayName,
           bio: input.bio,
           avatarUrl: input.avatarUrl,
-          websiteUrl: input.websiteUrl,
         },
       });
 
-      // Update socials
-      await ctx.db.socials.upsert({
-        where: { creatorId: creator.id },
-        create: {
-          creatorId: creator.id,
-          xUsername: input.xUsername,
-          instagramUsername: input.instagramUsername,
-          githubUsername: input.githubUsername,
-          facebookUsername: input.facebookUsername,
-          email: input.email,
-          nostrPubkey: input.nostrPubkey,
-        },
-        update: {
-          xUsername: input.xUsername,
-          instagramUsername: input.instagramUsername,
-          githubUsername: input.githubUsername,
-          facebookUsername: input.facebookUsername,
-          email: input.email,
-          nostrPubkey: input.nostrPubkey,
-        },
-      });
-
-      // Update wallets
       await ctx.db.wallets.upsert({
         where: { creatorId: creator.id },
         create: {
@@ -295,10 +307,41 @@ export const profilesRouter = createTRPCRouter({
         },
       });
 
-      // Fetch updated socials and wallets
-      const socials = await ctx.db.socials.findUnique({
+      await ctx.db.link.deleteMany({
         where: { creatorId: creator.id },
       });
+
+      if (Array.isArray(input.links)) {
+        for (const [i, link] of input.links.entries()) {
+          await ctx.db.link.create({
+            data: {
+              creatorId: creator.id,
+              title: link.title,
+              url: link.url,
+              type: link.type || "link",
+              description: link.description,
+              imageUrl: link.imageUrl,
+              icon: link.icon,
+              siteName: link.siteName,
+              author: link.author,
+              canonical: link.canonical,
+              themeColor: link.themeColor,
+              publishedTime: link.publishedTime,
+              modifiedTime: link.modifiedTime,
+              videoUrl: link.videoUrl,
+              audioUrl: link.audioUrl,
+              album: link.album,
+              artist: link.artist,
+              genre: link.genre,
+              releaseDate: link.releaseDate,
+              imageWidth: link.imageWidth,
+              imageHeight: link.imageHeight,
+              isActive: link.isActive ?? true,
+              position: i,
+            },
+          });
+        }
+      }
 
       const wallets = await ctx.db.wallets.findUnique({
         where: { creatorId: creator.id },
@@ -306,7 +349,6 @@ export const profilesRouter = createTRPCRouter({
 
       return {
         ...updatedCreator,
-        socials,
         wallets,
       };
     }),
@@ -330,7 +372,6 @@ export const profilesRouter = createTRPCRouter({
       return ctx.db.creator.update({
         where: { id: creator.id },
         data: {
-          websiteUrl: input.websiteUrl,
           theme: input.theme,
         },
       });

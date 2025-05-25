@@ -5,17 +5,8 @@ import { api } from "@/trpc/react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
-import {
-  X,
-  Instagram,
-  Github,
-  Facebook,
-  Mail,
-  Clipboard,
-  Check,
-  Link,
-} from "lucide-react";
-import { WalletType, type Wallets } from "@prisma/client";
+import { Clipboard, Check } from "lucide-react";
+import { WalletType, type Link, type Wallets } from "@prisma/client";
 
 const getWalletDisplayName = (walletType: WalletType) => {
   switch (walletType) {
@@ -36,23 +27,71 @@ const getWalletDisplayName = (walletType: WalletType) => {
   }
 };
 
-const getQrValue = (wallets?: Wallets) => {
-  switch (wallets?.mainWallet) {
+const getQrValue = (wallets?: Wallets | null) => {
+  if (!wallets) return "lightning:";
+  switch (wallets.mainWallet) {
     case WalletType.LIGHTNING:
-      return `lightning:${wallets?.lightningAddress}`;
+      return `lightning:${wallets.lightningAddress ?? ""}`;
     case WalletType.BITCOIN:
-      return `bitcoin:${wallets?.bitcoinAddress}`;
+      return `bitcoin:${wallets.bitcoinAddress ?? ""}`;
     case WalletType.ETHEREUM:
-      return `ethereum:${wallets?.ethereumAddress}`;
+      return `ethereum:${wallets.ethereumAddress ?? ""}`;
     case WalletType.SOLANA:
-      return `solana:${wallets?.solanaAddress}`;
+      return `solana:${wallets.solanaAddress ?? ""}`;
     case WalletType.DOGE:
-      return `doge:${wallets?.dogeAddress}`;
+      return `doge:${wallets.dogeAddress ?? ""}`;
     case WalletType.MONERO:
-      return `monero:${wallets?.moneroAddress}`;
+      return `monero:${wallets.moneroAddress ?? ""}`;
     default:
-      return `lightning:${wallets?.lightningAddress}`;
+      return `lightning:${wallets.lightningAddress ?? ""}`;
   }
+};
+
+const getMainWalletAddress = (wallets?: Wallets | null): string | undefined => {
+  if (!wallets) return undefined;
+  switch (wallets.mainWallet) {
+    case WalletType.LIGHTNING:
+      return wallets.lightningAddress ?? undefined;
+    case WalletType.BITCOIN:
+      return wallets.bitcoinAddress ?? undefined;
+    case WalletType.ETHEREUM:
+      return wallets.ethereumAddress ?? undefined;
+    case WalletType.SOLANA:
+      return wallets.solanaAddress ?? undefined;
+    case WalletType.DOGE:
+      return wallets.dogeAddress ?? undefined;
+    case WalletType.MONERO:
+      return wallets.moneroAddress ?? undefined;
+    default:
+      return wallets.lightningAddress ?? undefined;
+  }
+};
+
+const getContentTypeIndicator = (type?: string) => {
+  if (!type) return null;
+
+  if (type.startsWith("video.")) return "🎥";
+  if (type.startsWith("music.")) return "🎵";
+  if (type.startsWith("social.")) return "💬";
+  return null;
+};
+
+const shouldUseRichPreview = (link: Link | null | undefined): boolean => {
+  if (!link) {
+    return false;
+  }
+
+  const { imageUrl, type } = link;
+
+  if (typeof imageUrl !== "string" || imageUrl.trim() === "") {
+    return false;
+  }
+
+  if (typeof type !== "string" || type === "") {
+    return false;
+  }
+
+  return type.startsWith("video.") || type.startsWith("music.");
 };
 
 export default function CreatorProfilePage() {
@@ -61,189 +100,226 @@ export default function CreatorProfilePage() {
 
   const { data: creator } = api.profiles.getByUsername.useQuery({ username });
 
+  const mainWalletAddress = creator?.wallets
+    ? getMainWalletAddress(creator.wallets)
+    : undefined;
+
   const copyToClipboard = async () => {
-    if (creator?.wallets?.lightningAddress) {
-      await navigator.clipboard.writeText(creator.wallets.lightningAddress);
+    if (mainWalletAddress) {
+      await navigator.clipboard.writeText(mainWalletAddress);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   return (
-    <div className="relative w-full max-w-sm overflow-hidden rounded-xl border border-gray-700 bg-gray-800/40 p-8 backdrop-blur-sm">
+    <div className="relative w-full max-w-lg overflow-hidden rounded-xl border border-gray-700 bg-gray-800/40 p-8 backdrop-blur-sm">
       <div className="absolute inset-0 z-0 border-t border-b border-gray-700/30"></div>
       <div className="absolute inset-0 z-0 border-r border-l border-gray-700/30"></div>
 
       <div className="relative z-10 flex flex-col items-center">
         {creator?.avatarUrl ? (
-          <div className="mb-4 h-16 w-16 overflow-hidden rounded-full border-2 border-gray-700 shadow-lg">
+          <div className="mb-4 h-[100px] w-[100px] overflow-hidden rounded-full border border-gray-700 shadow-lg">
             <Image
               src={creator.avatarUrl}
-              alt={creator.displayName}
-              width={64}
-              height={64}
+              alt={creator.displayName ?? username}
+              width={100}
+              height={100}
               className="h-full w-full object-cover"
+              priority
             />
           </div>
         ) : (
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border-2 border-gray-700">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border-2 border-gray-700 bg-gray-700/30">
             <Image
               src="/assets/logo.svg"
               alt="SatSip Logo"
-              width={64}
-              height={64}
-              className="h-auto w-full opacity-70"
+              width={48}
+              height={48}
+              className="opacity-70"
               priority
             />
           </div>
         )}
         <h1 className="flex flex-col items-center justify-center text-xl font-medium tracking-wide text-gray-100">
           {creator?.displayName ?? "ANON_USER"}
-          <span className="mb-3 font-mono text-xs text-amber-400/80">
+          <span className="mb-1 font-mono text-xs text-amber-400/80">
             @{username}
           </span>
         </h1>
         {creator?.bio && (
-          <div className="mb-6 text-center text-xs leading-relaxed text-gray-400">
+          <p className="mb-4 text-center text-sm leading-relaxed text-gray-400">
             {creator.bio}
-          </div>
+          </p>
         )}
-        {creator?.wallets?.lightningAddress && (
-          <div className="w-full rounded-lg bg-gray-900/70 p-4 text-center">
-            <div className="mb-2 text-xs tracking-widest text-amber-400/80 uppercase">
+
+        {creator?.wallets && mainWalletAddress && (
+          <div className="mb-6 w-full rounded-lg bg-gray-900/70 p-4 text-center">
+            <div className="mb-1 text-sm font-semibold tracking-wider text-amber-400">
               {getWalletDisplayName(
-                creator?.wallets?.mainWallet ?? WalletType.LIGHTNING,
+                creator.wallets.mainWallet ?? WalletType.LIGHTNING,
               )}
             </div>
-            <div className="font-mono text-xs text-amber-400/80">
-              ┌─ SCAN TO TIP ─┐
-            </div>
-            <div className="inline-block rounded-md bg-gray-800 p-3">
+            <div className="mb-3 text-xs text-gray-400">Scan to send a tip</div>
+            <div className="inline-block rounded-md bg-gray-800 p-3 shadow-md">
               <QRCodeSVG
-                value={getQrValue(creator?.wallets)}
+                value={getQrValue(creator.wallets)}
                 size={150}
                 level="M"
-                fgColor="#fbbf24" // amber-400
+                fgColor="#fbbf24"
                 bgColor="transparent"
               />
             </div>
-            <div className="mt-2 flex items-center justify-center gap-2">
-              <p className="font-mono text-xs text-gray-400">
-                {creator?.wallets?.lightningAddress}
+            <div className="mt-3 flex items-center justify-center gap-2">
+              <p className="font-mono text-xs break-all text-gray-400">
+                {mainWalletAddress}
               </p>
               <button
                 onClick={copyToClipboard}
-                className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-gray-800 p-1 text-gray-300 transition-all hover:bg-gray-700"
-                title="Copy to clipboard"
+                className="flex h-7 w-7 flex-shrink-0 cursor-pointer items-center justify-center rounded-md bg-gray-700/60 p-1.5 text-gray-300 transition-all hover:bg-gray-600/80"
+                title="Copy address"
               >
                 {copied ? (
-                  <Check size={14} className="text-green-400" />
+                  <Check size={16} className="text-green-400" />
                 ) : (
-                  <Clipboard size={14} />
+                  <Clipboard size={16} />
                 )}
               </button>
             </div>
           </div>
         )}
-        <div className="mt-6 flex w-full justify-center space-x-4">
-          {creator?.socials?.xUsername && (
-            <a
-              href={`https://x.com/${creator.socials.xUsername}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
-              title="X / Twitter"
-            >
-              <X size={16} />
-            </a>
-          )}
-          {creator?.websiteUrl && (
-            <a
-              href={creator.websiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
-              title="Website Url"
-            >
-              <Link size={16} />
-            </a>
-          )}
-          {creator?.socials?.instagramUsername && (
-            <a
-              href={`https://instagram.com/${creator.socials.instagramUsername}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
-              title="Instagram"
-            >
-              <Instagram size={16} />
-            </a>
-          )}
-          {creator?.socials?.githubUsername && (
-            <a
-              href={`https://github.com/${creator.socials.githubUsername}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
-              title="GitHub"
-            >
-              <Github size={16} />
-            </a>
-          )}
-          {creator?.socials?.facebookUsername && (
-            <a
-              href={`https://facebook.com/${creator.socials.facebookUsername}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
-              title="Facebook"
-            >
-              <Facebook size={16} />
-            </a>
-          )}
-          {creator?.socials?.email && (
-            <a
-              href={`mailto:${creator.socials.email}`}
-              className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
-              title="Email"
-            >
-              <Mail size={16} />
-            </a>
-          )}
-          {creator?.socials?.nostrPubkey && (
-            <a
-              href={`nostr:${creator.socials.nostrPubkey}`}
-              className="flex items-center justify-center rounded-full p-1 text-gray-400 transition hover:text-amber-400"
-              title="Nostr"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 256 256"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="flex-shrink-0"
-              >
-                <path
-                  d="M210.8 199.4c0 3.1-2.5 5.7-5.7 5.7h-68c-3.1 0-5.7-2.5-5.7-5.7v-15.5c.3-19 2.3-37.2 6.5-45.5 2.5-5 6.7-7.7 11.5-9.1 9.1-2.7 24.9-.9 31.7-1.2 0 0 20.4.8 20.4-10.7s-9.1-8.6-9.1-8.6c-10 .3-17.7-.4-22.6-2.4-8.3-3.3-8.6-9.2-8.6-11.2-.4-23.1-34.5-25.9-64.5-20.1-32.8 6.2.4 53.3.4 116.1v8.4c0 3.1-2.6 5.6-5.7 5.6H57.7c-3.1 0-5.7-2.5-5.7-5.7v-144c0-3.1 2.5-5.7 5.7-5.7h31.7c3.1 0 5.7 2.5 5.7 5.7 0 4.7 5.2 7.2 9 4.5 11.4-8.2 26-12.5 42.4-12.5 36.6 0 64.4 21.4 64.4 68.7v83.2ZM150 99.3c0-6.7-5.4-12.1-12.1-12.1s-12.1 5.4-12.1 12.1 5.4 12.1 12.1 12.1S150 106 150 99.3Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </a>
-          )}
-        </div>
-        <div className="mt-6 text-center">
-          <Image
-            src="/assets/logo.svg"
-            alt="SatSip Logo"
-            width={35}
-            height={35}
-            className="mx-auto"
-            priority
-          />
-          <p className="text-xs text-gray-500">
-            caffeine level: {Math.floor(Math.random() * 100)}%
-          </p>
+
+        <div className="mt-2 flex w-full flex-col gap-3">
+          {creator?.links.map((link) => {
+            const useRichPreview = shouldUseRichPreview(link);
+            const contentTypeIndicator = getContentTypeIndicator(
+              link?.type as string,
+            );
+
+            if (useRichPreview) {
+              // Rich preview layout for media types only
+              return (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block overflow-hidden rounded-lg bg-gray-800/70 transition-all hover:bg-gray-700/70 focus:ring-2 focus:ring-amber-400/60 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none"
+                >
+                  {/* Image section */}
+                  <div className="relative h-44 w-full overflow-hidden">
+                    <Image
+                      src={link.imageUrl ?? ""}
+                      alt={link.title}
+                      fill
+                      className="object-cover transition-transform group-hover:scale-105"
+                      unoptimized
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    {/* Content type badge */}
+                    {contentTypeIndicator && (
+                      <div className="absolute top-2 right-2 rounded bg-black/60 px-2 py-1 text-xs">
+                        {contentTypeIndicator}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content section */}
+                  <div className="p-3">
+                    <div className="flex items-start gap-2">
+                      {link?.icon && (
+                        <div className="mt-0.5 flex-shrink-0">
+                          <Image
+                            src={link.icon}
+                            alt="favicon"
+                            width={16}
+                            height={16}
+                            className="rounded"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display =
+                                "none";
+                            }}
+                            unoptimized
+                          />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="mb-1 line-clamp-2 text-sm font-medium text-gray-100">
+                          {link.title}
+                        </h3>
+                        {link.description && (
+                          <p className="mb-2 line-clamp-2 text-xs text-gray-400">
+                            {link.description}
+                          </p>
+                        )}
+                        <p className="truncate text-xs text-gray-500">
+                          {link.url.replace(/^https?:\/\//, "")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              );
+            } else {
+              return (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center rounded-lg bg-gray-800/70 px-6 py-4 text-gray-100 transition-colors hover:bg-gray-700/70 focus:ring-2 focus:ring-amber-400/60 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none"
+                >
+                  <div className="flex flex-shrink-0 flex-col items-center gap-2">
+                    {link?.icon ? (
+                      <Image
+                        src={link.icon}
+                        alt="favicon"
+                        width={32}
+                        height={32}
+                        className="rounded"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded bg-gray-700/50">
+                        <span className="text-xs">🔗</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="ml-4 min-w-0 flex-1">
+                    <h3 className="mb-2 line-clamp-2 text-lg font-medium text-gray-100 group-hover:text-white">
+                      {link.title?.length > 30
+                        ? link.title.slice(0, 30) + "…"
+                        : link.title}
+                    </h3>
+                    <p className="truncate text-xs text-gray-500">
+                      {link.url.replace(/^https?:\/\//, "")}
+                    </p>
+                  </div>
+
+                  {(link.siteName ?? link.author) && (
+                    <div className="ml-4 flex flex-shrink-0 flex-col items-end text-right">
+                      {link.siteName && (
+                        <span className="text-xs font-medium text-gray-400">
+                          {link.siteName}
+                        </span>
+                      )}
+                      {link.author && (
+                        <span className="text-xs text-gray-500">
+                          {link.author}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </a>
+              );
+            }
+          })}
         </div>
       </div>
     </div>

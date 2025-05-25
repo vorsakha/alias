@@ -5,7 +5,7 @@ import { profileUpdateSchema } from "@/server/api/routers/profiles";
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth();
@@ -18,7 +18,7 @@ export async function PUT(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Get existing creator to verify ownership
     const creator = await db.creator.findUnique({
@@ -75,7 +75,8 @@ export async function PUT(
 
     return NextResponse.json(updatedCreator);
   } catch (error) {
-    console.error(`Error updating creator ${params.id}:`, error);
+    const resolvedParams = await params;
+    console.error(`Error updating creator ${resolvedParams.id}:`, error);
     return NextResponse.json(
       { error: "Failed to update creator profile" },
       { status: 500 },

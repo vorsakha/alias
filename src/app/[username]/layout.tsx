@@ -53,9 +53,18 @@ const ProfileLayout = ({ children }: { children: React.ReactNode }) => {
         </Link>
       </div>
       {children}
-      <footer className="flex items-center justify-center">
-        <p className="absolute bottom-4 text-sm text-gray-400">
-          Brewed with ⚡ by SatSip
+      <footer className="mt-4 flex items-center justify-center">
+        <p className="text-sm text-gray-400">
+          <Link
+            href="https://sat.sip"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
+            Join {creator.displayName ?? username} on{" "}
+            <span className="font-bold text-white">SatSip</span> &mdash; Sip,
+            Tip, Connect.
+          </Link>
         </p>
       </footer>
     </div>

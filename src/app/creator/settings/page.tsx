@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/trpc/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
 
@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { themeOptions } from "@/app/_constants/theme";
 import { WalletType } from "@prisma/client";
 import {
@@ -40,6 +41,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Trash2, GripVertical, Plus, Loader2 } from "lucide-react";
+import type { Metadata } from "@/app/api/url-metadata/route";
+import Image from "next/image";
+import { useDragAndDrop } from "@/hooks/use-drag-and-drop";
 
 const profileFormSchema = z
   .object({
@@ -52,20 +57,7 @@ const profileFormSchema = z
       .url({ message: "Please enter a valid URL." })
       .optional()
       .nullable(),
-    // socials
-    xUsername: z.string().optional().nullable(),
-    instagramUsername: z.string().optional().nullable(),
-    githubUsername: z.string().optional().nullable(),
-    facebookUsername: z.string().optional().nullable(),
-    email: z
-      .string()
-      .email()
-      .or(z.literal(""))
-      .optional()
-      .nullable()
-      .transform((val) => (val === "" ? null : val)),
-    nostrPubkey: z.string().optional().nullable(),
-    // wallets
+
     lightningAddress: z.string().optional().nullable(),
     bitcoinAddress: z.string().optional().nullable(),
     ethereumAddress: z.string().optional().nullable(),
@@ -73,6 +65,37 @@ const profileFormSchema = z
     dogeAddress: z.string().optional().nullable(),
     moneroAddress: z.string().optional().nullable(),
     mainWallet: z.nativeEnum(WalletType),
+
+    links: z
+      .array(
+        z.object({
+          title: z.string(),
+          url: z.string().url(),
+          type: z.string(),
+          description: z.string().optional().nullable(),
+          imageUrl: z.string().optional().nullable(),
+          icon: z.string().optional().nullable(),
+
+          siteName: z.string().optional().nullable(),
+          author: z.string().optional().nullable(),
+          canonical: z.string().optional().nullable(),
+          themeColor: z.string().optional().nullable(),
+          publishedTime: z.string().optional().nullable(),
+          modifiedTime: z.string().optional().nullable(),
+          videoUrl: z.string().optional().nullable(),
+          audioUrl: z.string().optional().nullable(),
+          album: z.string().optional().nullable(),
+          artist: z.string().optional().nullable(),
+          genre: z.string().optional().nullable(),
+          releaseDate: z.string().optional().nullable(),
+          imageWidth: z.number().optional().nullable(),
+          imageHeight: z.number().optional().nullable(),
+          position: z.number().optional(),
+          isActive: z.boolean().optional(),
+        }),
+      )
+      .optional()
+      .nullable(),
   })
   .refine(
     (data) => {
@@ -107,13 +130,6 @@ const walletFields: {
 ];
 
 const websiteFormSchema = z.object({
-  websiteUrl: z
-    .string()
-    .url({ message: "Please enter a valid URL." })
-    .or(z.literal(""))
-    .optional()
-    .nullable()
-    .transform((val) => (val === "" ? null : val)),
   themeOption: z.string(),
   customTheme: z.string().optional(),
 });
@@ -124,11 +140,20 @@ type WebsiteFormValues = z.infer<typeof websiteFormSchema>;
 export default function CreatorSettings() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("profile");
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [isAddingLink, setIsAddingLink] = useState(false);
+  const {
+    draggedIndex,
+    dragOverIndex,
+    handleDragStart,
+    handleDragOver,
+    handleDragLeave,
+    clearDragState,
+  } = useDragAndDrop();
 
   const { data: session, isLoading: sessionLoading } =
     api.profiles.getSession.useQuery();
 
-  // Handle redirects based on auth
   useEffect(() => {
     if (!sessionLoading && !session?.user) {
       router.push("/");
@@ -145,7 +170,18 @@ export default function CreatorSettings() {
       bio: "",
       avatarUrl: "",
       lightningAddress: "",
+      links: [],
     },
+  });
+
+  const {
+    fields: linkFields,
+    append: appendLink,
+    remove: removeLink,
+    update: updateLink,
+  } = useFieldArray({
+    control: profileForm.control,
+    name: "links",
   });
 
   const websiteForm = useForm<WebsiteFormValues>({
@@ -163,18 +199,13 @@ export default function CreatorSettings() {
         bio: creator.bio ?? "",
         avatarUrl: creator.avatarUrl ?? "",
         lightningAddress: creator.wallets?.lightningAddress ?? "",
-        xUsername: creator.socials?.xUsername ?? "",
-        instagramUsername: creator.socials?.instagramUsername ?? "",
-        githubUsername: creator.socials?.githubUsername ?? "",
-        facebookUsername: creator.socials?.facebookUsername ?? "",
-        email: creator.socials?.email ?? null,
-        nostrPubkey: creator.socials?.nostrPubkey ?? "",
         bitcoinAddress: creator.wallets?.bitcoinAddress ?? "",
         ethereumAddress: creator.wallets?.ethereumAddress ?? "",
         solanaAddress: creator.wallets?.solanaAddress ?? "",
         dogeAddress: creator.wallets?.dogeAddress ?? "",
         moneroAddress: creator.wallets?.moneroAddress ?? "",
         mainWallet: creator.wallets?.mainWallet ?? undefined,
+        links: creator.links ?? [],
       });
 
       const currentTheme = creator.theme ?? themeOptions?.[0]?.value ?? "";
@@ -183,7 +214,6 @@ export default function CreatorSettings() {
       );
 
       websiteForm.reset({
-        websiteUrl: creator.websiteUrl ?? null,
         themeOption: isCustomTheme ? "custom" : currentTheme,
         customTheme: isCustomTheme ? currentTheme : "",
       });
@@ -241,6 +271,90 @@ export default function CreatorSettings() {
     },
   });
 
+  async function fetchUrlMetadata(url: string): Promise<Metadata> {
+    const response = await fetch("/api/url-metadata", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch metadata");
+    }
+
+    const data = (await response.json()) as Metadata;
+    return data;
+  }
+
+  async function handleAddLink() {
+    if (!newLinkUrl.trim()) return;
+
+    try {
+      setIsAddingLink(true);
+      const metadata = await fetchUrlMetadata(newLinkUrl);
+      const currentLinks = profileForm.getValues("links") ?? [];
+
+      appendLink({
+        url: newLinkUrl,
+        icon: metadata.favicon ?? undefined,
+        description: metadata.description ?? "",
+        isActive: true,
+        position: currentLinks.length,
+        ...metadata,
+      });
+
+      setNewLinkUrl("");
+      toast.success("Link added successfully");
+    } catch {
+      toast.error("Failed to add link");
+    } finally {
+      setIsAddingLink(false);
+    }
+  }
+
+  function toggleLinkActive(index: number) {
+    const currentLink = linkFields[index];
+    if (currentLink) {
+      updateLink(index, {
+        ...currentLink,
+        isActive: !currentLink.isActive,
+      });
+    }
+  }
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent, dropIndex: number) => {
+      e.preventDefault();
+
+      if (draggedIndex === null || draggedIndex === dropIndex) {
+        clearDragState();
+        return;
+      }
+
+      const linkFields = profileForm.getValues("links") ?? [];
+      const newLinks = [...linkFields];
+
+      const draggedItem = newLinks[draggedIndex];
+      if (!draggedItem) return;
+
+      newLinks.splice(draggedIndex, 1);
+
+      newLinks.splice(dropIndex, 0, draggedItem);
+
+      newLinks.forEach((link, i) => {
+        if (link) {
+          link.position = i;
+        }
+      });
+
+      profileForm.setValue("links", newLinks);
+      clearDragState();
+    },
+    [draggedIndex, clearDragState, profileForm],
+  );
+
   function onProfileSubmit(data: ProfileFormValues) {
     profileMutation.mutate(data);
   }
@@ -250,7 +364,6 @@ export default function CreatorSettings() {
       data.themeOption === "custom" ? data.customTheme : data.themeOption;
 
     websiteMutation.mutate({
-      websiteUrl: data.websiteUrl,
       theme: finalTheme,
     });
   }
@@ -332,18 +445,19 @@ export default function CreatorSettings() {
                     <Avatar className="h-24 w-24">
                       <AvatarImage src={profileForm.watch("avatarUrl") ?? ""} />
                       <AvatarFallback>
-                        {creator.displayName.substring(0, 2).toUpperCase()}
+                        {creator?.displayName?.substring(0, 2).toUpperCase() ??
+                          ""}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="text-lg font-medium">
-                        @{creator.username}
+                        @{creator?.username ?? "unknown"}
                       </h3>
                       <p className="text-muted-foreground text-sm">
                         Your profile URL:{" "}
                         {typeof window !== "undefined"
-                          ? `${window.location.origin}/${creator.username}`
-                          : `/${creator.username}`}
+                          ? `${window.location.origin}/${creator?.username ?? "unknown"}`
+                          : `/${creator?.username ?? "unknown"}`}
                       </p>
                     </div>
                   </div>
@@ -578,141 +692,119 @@ export default function CreatorSettings() {
                     />
                   </div>
 
-                  <h3 className="mb-1 pt-4 text-lg font-medium">
-                    Social Media
-                  </h3>
+                  <h3 className="mb-1 pt-4 text-lg font-medium">Links</h3>
                   <p className="text-muted-foreground mb-4 text-sm">
-                    Connect your social media accounts to your profile.
+                    Add custom links to your profile page.
                   </p>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={profileForm.control}
-                      name="xUsername"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>X (Twitter)</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="yourusername"
-                              {...field}
-                              value={field.value ?? ""}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your X username without the @ symbol.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={profileForm.control}
-                      name="instagramUsername"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Instagram</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="yourusername"
-                              {...field}
-                              value={field.value ?? ""}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your Instagram username without the @ symbol.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={profileForm.control}
-                      name="githubUsername"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>GitHub</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="yourusername"
-                              {...field}
-                              value={field.value ?? ""}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your GitHub username.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={profileForm.control}
-                      name="facebookUsername"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Facebook</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="yourusername"
-                              {...field}
-                              value={field.value ?? ""}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your Facebook username or page name.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={profileForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Public Email</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="email"
-                              placeholder="your@email.com"
-                              {...field}
-                              value={field.value ?? ""}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            A public email people can contact you at.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={profileForm.control}
-                      name="nostrPubkey"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nostr Public Key</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="npub..."
-                              {...field}
-                              value={field.value ?? ""}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Your Nostr public key (npub format).
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  {/* Add Link Form */}
+                  <div className="space-y-4 rounded-lg border p-4">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="https://example.com"
+                        value={newLinkUrl}
+                        onChange={(e) => setNewLinkUrl(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void handleAddLink();
+                          }
+                        }}
+                        disabled={isAddingLink}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddLink}
+                        disabled={!newLinkUrl.trim() || isAddingLink}
+                        size="sm"
+                      >
+                        {isAddingLink ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Plus className="h-4 w-4" />
+                        )}
+                        {isAddingLink ? "Adding..." : "Add Link"}
+                      </Button>
+                    </div>
                   </div>
+
+                  {/* Links List */}
+                  {linkFields.length > 0 && (
+                    <div className="space-y-2">
+                      {linkFields.map((field, index) => (
+                        <div
+                          key={field.id}
+                          className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+                            draggedIndex === index
+                              ? "bg-muted opacity-50"
+                              : dragOverIndex === index
+                                ? "border-primary bg-primary/5"
+                                : ""
+                          }`}
+                        >
+                          <div
+                            className="cursor-grab text-gray-400 hover:text-gray-600 active:cursor-grabbing"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            draggable
+                            onDragStart={() => handleDragStart(index)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, index)}
+                            onDragEnd={clearDragState}
+                          >
+                            <GripVertical className="h-4 w-4" />
+                          </div>
+                          {field.icon && (
+                            <span className="mr-2 text-lg" aria-label="icon">
+                              <Image
+                                src={field.icon}
+                                alt="favicon"
+                                width={25}
+                                height={25}
+                                className="inline-block rounded"
+                                style={{ verticalAlign: "middle" }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display =
+                                    "none";
+                                }}
+                                unoptimized
+                              />
+                            </span>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium">
+                              {field.title}
+                            </div>
+                            <div className="text-muted-foreground truncate text-xs">
+                              {field.url}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                checked={field.isActive ?? true}
+                                onCheckedChange={() => toggleLinkActive(index)}
+                              />
+                              <span className="text-muted-foreground text-xs">
+                                {field.isActive ? "Active" : "Inactive"}
+                              </span>
+                            </div>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeLink(index)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <Button type="submit" disabled={profileMutation.isPending}>
                     {profileMutation.isPending ? "Saving..." : "Save Profile"}
@@ -738,28 +830,6 @@ export default function CreatorSettings() {
                   onSubmit={websiteForm.handleSubmit(onWebsiteSubmit)}
                   className="space-y-8"
                 >
-                  <FormField
-                    control={websiteForm.control}
-                    name="websiteUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Website URL</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="https://example.com"
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          A link to your personal website or social media.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Theme Selection */}
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-lg font-medium">Theme</h3>
@@ -768,7 +838,6 @@ export default function CreatorSettings() {
                       </p>
                     </div>
 
-                    {/* Theme Preview */}
                     <div
                       className={`${websiteForm.watch("themeOption")} mb-6 flex h-40 items-center justify-center rounded-lg border p-4 shadow-sm`}
                     >
