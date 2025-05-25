@@ -227,6 +227,9 @@ export const profilesRouter = createTRPCRouter({
         include: {
           wallets: true,
           links: {
+            where: {
+              isActive: true,
+            },
             orderBy: {
               position: "asc",
             },

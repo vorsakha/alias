@@ -197,7 +197,6 @@ export default function CreatorProfilePage() {
             );
 
             if (useRichPreview) {
-              // Rich preview layout for media types only
               return (
                 <a
                   key={link.id}
@@ -206,7 +205,6 @@ export default function CreatorProfilePage() {
                   rel="noopener noreferrer"
                   className="group block overflow-hidden rounded-lg bg-gray-800/70 transition-all hover:bg-gray-700/70 focus:ring-2 focus:ring-amber-400/60 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none"
                 >
-                  {/* Image section */}
                   <div className="relative h-44 w-full overflow-hidden">
                     <Image
                       src={link.imageUrl ?? ""}
@@ -218,7 +216,6 @@ export default function CreatorProfilePage() {
                         (e.target as HTMLImageElement).style.display = "none";
                       }}
                     />
-                    {/* Content type badge */}
                     {contentTypeIndicator && (
                       <div className="absolute top-2 right-2 rounded bg-black/60 px-2 py-1 text-xs">
                         {contentTypeIndicator}
@@ -226,7 +223,6 @@ export default function CreatorProfilePage() {
                     )}
                   </div>
 
-                  {/* Content section */}
                   <div className="p-3">
                     <div className="flex items-start gap-2">
                       {link?.icon && (
@@ -269,7 +265,7 @@ export default function CreatorProfilePage() {
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex items-center rounded-lg bg-gray-800/70 px-6 py-4 text-gray-100 transition-colors hover:bg-gray-700/70 focus:ring-2 focus:ring-amber-400/60 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none"
+                  className="group flex items-center rounded-lg bg-gray-800/70 px-4 py-4 text-gray-100 transition-colors hover:bg-gray-700/70 focus:ring-2 focus:ring-amber-400/60 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none"
                 >
                   <div className="flex flex-shrink-0 flex-col items-center gap-2">
                     {link?.icon ? (
