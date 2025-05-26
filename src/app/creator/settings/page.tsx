@@ -755,16 +755,38 @@ export default function CreatorSettings() {
                                 ? "border-primary bg-primary/5"
                                 : ""
                           }`}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, index)}
                         >
                           <div
                             className="cursor-grab text-gray-400 hover:text-gray-600 active:cursor-grabbing"
-                            onMouseDown={(e) => e.stopPropagation()}
                             draggable
-                            onDragStart={() => handleDragStart(index)}
-                            onDragOver={(e) => handleDragOver(e, index)}
-                            onDragLeave={handleDragLeave}
-                            onDrop={(e) => handleDrop(e, index)}
-                            onDragEnd={clearDragState}
+                            onDragStart={(e) => {
+                              e.stopPropagation();
+                              handleDragStart(index);
+
+                              e.dataTransfer.effectAllowed = "move";
+                              e.dataTransfer.dropEffect = "move";
+
+                              const dragImage = document.createElement("div");
+                              dragImage.style.position = "absolute";
+                              dragImage.style.top = "-1000px";
+                              dragImage.style.width = "1px";
+                              dragImage.style.height = "1px";
+                              dragImage.style.backgroundColor = "transparent";
+                              document.body.appendChild(dragImage);
+                              e.dataTransfer.setDragImage(dragImage, 0, 0);
+
+                              setTimeout(() => {
+                                document.body.removeChild(dragImage);
+                              }, 0);
+                            }}
+                            onDragEnd={(e) => {
+                              e.stopPropagation();
+                              clearDragState();
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
                           >
                             <GripVertical className="h-4 w-4" />
                           </div>
