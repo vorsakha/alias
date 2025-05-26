@@ -4,6 +4,9 @@ import { api } from "@/trpc/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { PageContainer } from "./_components/profile-container";
+import { CreatorProfileError } from "./_components/profile-error";
+import { CreatorProfileSkeleton } from "./_components/profile-skeleton";
 
 // Default dark theme
 const defaultTheme = "bg-gray-900";
@@ -13,31 +16,32 @@ const ProfileLayout = ({ children }: { children: React.ReactNode }) => {
   const {
     data: creator,
     isLoading,
+    isError,
     error,
   } = api.profiles.getByUsername.useQuery({ username });
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-900">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></div>
-      </div>
+      <PageContainer>
+        <CreatorProfileSkeleton />
+      </PageContainer>
     );
   }
 
-  if (error || !creator) {
+  if (isError || !creator) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-900 p-4">
-        <h1 className="text-xl font-medium text-amber-400">
-          {error ? "Error loading profile" : "Creator not found"}
-        </h1>
-      </div>
+      <PageContainer>
+        <CreatorProfileError
+          message={error?.message ?? "Creator not found or failed to load."}
+        />
+      </PageContainer>
     );
   }
 
   return (
     <div
       className={`relative flex min-h-screen flex-col items-center justify-center ${
-        creator.theme ?? defaultTheme
+        creator?.theme ?? defaultTheme
       } p-4 font-sans`}
     >
       <div className="absolute top-4 left-4 mb-4 w-16">
@@ -61,7 +65,7 @@ const ProfileLayout = ({ children }: { children: React.ReactNode }) => {
             rel="noopener noreferrer"
             className="hover:underline"
           >
-            Join {creator.displayName ?? username} on{" "}
+            Join {creator?.displayName ?? username} on{" "}
             <span className="font-bold text-white">SatSip</span> &mdash; Sip,
             Tip, Connect.
           </Link>
