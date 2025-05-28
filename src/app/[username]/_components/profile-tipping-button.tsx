@@ -79,7 +79,7 @@ export function TippingButton({ wallets, theme }: TippingButtonProps) {
         <Button
           variant="default"
           size="lg"
-          className={`w-full border px-6 py-3 font-semibold shadow-lg transition-all duration-200 ${
+          className={`w-full px-6 py-3 font-semibold shadow-lg transition-all duration-200 ${
             theme.borderRadius ?? "rounded-xl"
           } ${buttonClasses} ${getButtonExtraClasses()}`}
         >
