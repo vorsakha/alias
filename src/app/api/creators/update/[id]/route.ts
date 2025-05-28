@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { auth } from "@/server/auth";
 import { NextResponse } from "next/server";
 import { profileUpdateSchema } from "@/server/api/routers/profiles";
+import { revalidatePath } from "next/cache";
 
 export async function PUT(
   request: Request,
@@ -10,7 +11,6 @@ export async function PUT(
   try {
     const session = await auth();
 
-    // Check if user is authenticated
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -20,7 +20,6 @@ export async function PUT(
 
     const { id } = await params;
 
-    // Get existing creator to verify ownership
     const creator = await db.creator.findUnique({
       where: { id },
       include: {
@@ -32,7 +31,6 @@ export async function PUT(
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
     }
 
-    // Check if the authenticated user is the owner of this creator profile
     if (creator.userId !== session.user.id) {
       return NextResponse.json(
         { error: "You don't have permission to update this profile" },
@@ -40,7 +38,6 @@ export async function PUT(
       );
     }
 
-    // Parse and validate request body
     const body = (await request.json()) as unknown;
     const validationResult = profileUpdateSchema.safeParse(body);
 
@@ -56,7 +53,6 @@ export async function PUT(
 
     const validData = validationResult.data;
 
-    // Update the creator profile
     const updatedCreator = await db.creator.update({
       where: { id },
       data: {
@@ -72,6 +68,8 @@ export async function PUT(
         }),
       },
     });
+
+    revalidatePath(`/${creator.username}`);
 
     return NextResponse.json(updatedCreator);
   } catch (error) {

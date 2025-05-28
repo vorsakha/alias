@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import { Link as LinkIconLucide } from "lucide-react";
+import { applyThemeClasses, type ThemeConfig } from "@/app/_constants/theme";
 
 import { getContentTypeIndicator } from "../_utils";
 import { shouldUseRichPreview } from "../_utils";
@@ -8,15 +11,21 @@ import type { Link } from "@prisma/client";
 
 interface LinkItemProps {
   link: Link;
+  theme: ThemeConfig;
 }
 
-export function LinkItem({ link }: LinkItemProps) {
+export function LinkItem({ link, theme }: LinkItemProps) {
   const useRichPreview = shouldUseRichPreview(link);
-  const contentType = getContentTypeIndicator(link.type as string);
+  const contentType = getContentTypeIndicator(link.type);
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     (e.target as HTMLImageElement).style.display = "none";
   };
+
+  const linkClasses = applyThemeClasses(theme, "links");
+  const textColor = theme.textColor;
+  const mutedColor = theme.mutedColor;
+  const accentColor = theme.accentColor;
 
   if (useRichPreview && link.imageUrl) {
     return (
@@ -25,7 +34,7 @@ export function LinkItem({ link }: LinkItemProps) {
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="group block overflow-hidden rounded-xl bg-gray-800/80 shadow-lg transition-all duration-200 ease-in-out hover:bg-gray-700/70 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none"
+          className={`group block overflow-hidden border shadow-lg transition-all duration-200 ease-in-out focus:ring-2 focus:ring-offset-2 focus:outline-none ${linkClasses}`}
         >
           <div className="relative h-44 w-full overflow-hidden">
             <Image
@@ -59,15 +68,19 @@ export function LinkItem({ link }: LinkItemProps) {
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h3 className="mb-0.5 line-clamp-2 text-base font-semibold text-gray-100">
+                <h3
+                  className={`mb-0.5 line-clamp-2 text-base font-semibold ${textColor}`}
+                >
                   {link.title}
                 </h3>
                 {link.description && (
-                  <p className="mb-1.5 line-clamp-2 text-xs text-gray-400">
+                  <p className={`mb-1.5 line-clamp-2 text-xs ${mutedColor}`}>
                     {link.description}
                   </p>
                 )}
-                <p className="truncate text-xs text-amber-400/80 group-hover:text-amber-400">
+                <p
+                  className={`truncate text-xs ${accentColor}/80 group-hover:${accentColor}`}
+                >
                   {link.url.replace(/^https?:\/\//, "")}
                 </p>
               </div>
@@ -88,7 +101,7 @@ export function LinkItem({ link }: LinkItemProps) {
         href={link.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex items-center gap-4 rounded-xl bg-gray-800/80 p-4 shadow-lg transition-all duration-200 ease-in-out hover:bg-gray-700/70 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none"
+        className={`group flex items-center gap-4 border p-4 shadow-lg transition-all duration-200 ease-in-out focus:ring-2 focus:ring-offset-2 focus:outline-none ${linkClasses}`}
       >
         <div className="flex-shrink-0">
           {link.icon ? (
@@ -108,22 +121,24 @@ export function LinkItem({ link }: LinkItemProps) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-1 text-base font-semibold text-gray-100">
+          <h3 className={`line-clamp-1 text-base font-semibold ${textColor}`}>
             {link.title}
           </h3>
-          <p className="truncate text-xs text-amber-400/80 group-hover:text-amber-400">
+          <p
+            className={`truncate text-xs ${accentColor}/80 group-hover:${accentColor}`}
+          >
             {link.url.replace(/^https?:\/\//, "")}
           </p>
         </div>
         {(link.siteName ?? link.author) && (
           <div className="mt-2 ml-2 hidden flex-shrink-0 flex-col items-end text-right sm:flex">
             {link.siteName && (
-              <span className="text-xs font-medium text-gray-400">
+              <span className={`text-xs font-medium ${mutedColor}`}>
                 {link.siteName}
               </span>
             )}
             {link.author && (
-              <span className="text-xs text-gray-500">{link.author}</span>
+              <span className={`text-xs ${mutedColor}`}>{link.author}</span>
             )}
           </div>
         )}

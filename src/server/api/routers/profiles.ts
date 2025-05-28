@@ -6,6 +6,7 @@ import {
 import { WalletType } from "@prisma/client";
 import { z } from "zod";
 import { utapi, extractFileKeyFromUrl } from "@/server/uploadthing";
+import { revalidatePath } from "next/cache";
 
 export const profileUpdateSchema = z.object({
   displayName: z
@@ -206,6 +207,9 @@ export const profilesRouter = createTRPCRouter({
         }
       }
 
+      revalidatePath(`/${input.username}`);
+      revalidatePath("/[username]", "page");
+
       return creator;
     }),
 
@@ -372,6 +376,8 @@ export const profilesRouter = createTRPCRouter({
         where: { creatorId: creator.id },
       });
 
+      revalidatePath(`/${creator.username}`);
+
       return {
         ...updatedCreator,
         wallets,
@@ -394,12 +400,16 @@ export const profilesRouter = createTRPCRouter({
         throw new Error("Creator profile not found");
       }
 
-      return ctx.db.creator.update({
+      const result = await ctx.db.creator.update({
         where: { id: creator.id },
         data: {
           theme: input.theme,
         },
       });
+
+      revalidatePath(`/${creator.username}`);
+
+      return result;
     }),
 
   updateAvatar: protectedProcedure
@@ -443,6 +453,8 @@ export const profilesRouter = createTRPCRouter({
           }
         }
       }
+
+      revalidatePath(`/${creator.username}`);
 
       return updatedCreator;
     }),

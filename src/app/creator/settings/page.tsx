@@ -32,7 +32,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { themeOptions } from "@/app/_constants/theme";
+import { themeOptions, getThemeConfig } from "@/app/_constants/theme";
+import { ThemeSelector } from "@/components/theme-selector";
 import { WalletType } from "@prisma/client";
 import {
   Select,
@@ -132,7 +133,6 @@ const walletFields: {
 
 const websiteFormSchema = z.object({
   themeOption: z.string(),
-  customTheme: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -192,7 +192,6 @@ export default function CreatorSettings() {
     resolver: zodResolver(websiteFormSchema),
     defaultValues: {
       themeOption: themeOptions[0]?.value ?? "",
-      customTheme: "",
     },
   });
 
@@ -212,14 +211,8 @@ export default function CreatorSettings() {
         links: creator.links ?? [],
       });
 
-      const currentTheme = creator.theme ?? themeOptions?.[0]?.value ?? "";
-      const isCustomTheme = !themeOptions.some(
-        (option) => option.value === currentTheme && option.value !== "custom",
-      );
-
       websiteForm.reset({
-        themeOption: isCustomTheme ? "custom" : currentTheme,
-        customTheme: isCustomTheme ? currentTheme : "",
+        themeOption: creator.theme ?? themeOptions[0]?.value ?? "",
       });
     }
   }, [creator, profileForm, websiteForm]);
@@ -390,11 +383,8 @@ export default function CreatorSettings() {
   }
 
   function onWebsiteSubmit(data: WebsiteFormValues) {
-    const finalTheme =
-      data.themeOption === "custom" ? data.customTheme : data.themeOption;
-
     websiteMutation.mutate({
-      theme: finalTheme,
+      theme: data.themeOption,
     });
   }
 
@@ -862,7 +852,7 @@ export default function CreatorSettings() {
             <CardHeader>
               <CardTitle>Website & Appearance</CardTitle>
               <CardDescription>
-                Customize your Carrd-style landing page and widget appearance.
+                Customize your landing page appearance.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -879,89 +869,21 @@ export default function CreatorSettings() {
                       </p>
                     </div>
 
-                    <div
-                      className={`${websiteForm.watch("themeOption")} mb-6 flex h-40 items-center justify-center rounded-lg border p-4 shadow-sm`}
-                    >
-                      <div className="text-center">
-                        <p className="font-semibold text-white drop-shadow-md">
-                          Theme Preview
-                        </p>
-                        <p className="mt-2 max-w-md text-sm text-white/90 drop-shadow-md">
-                          This is how your theme will look on your profile page
-                          and widget
-                        </p>
-                      </div>
-                    </div>
-
                     <FormField
                       control={websiteForm.control}
                       name="themeOption"
                       render={({ field }) => (
                         <FormItem className="space-y-3">
-                          <FormLabel>Select Theme</FormLabel>
                           <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
+                            <ThemeSelector
                               value={field.value}
-                              className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3"
-                            >
-                              {themeOptions.map((theme) => (
-                                <div key={theme.value}>
-                                  <RadioGroupItem
-                                    value={theme.value}
-                                    id={theme.value}
-                                    className="peer sr-only"
-                                  />
-                                  <label
-                                    htmlFor={theme.value}
-                                    className="hover:bg-muted peer-data-[state=checked]:border-primary [&:has(.peer-data-[state=checked])]:border-primary flex cursor-pointer flex-col space-y-2 rounded-md border p-4"
-                                  >
-                                    <div
-                                      className={`${theme.preview} h-16 w-full rounded-md`}
-                                    ></div>
-                                    <div className="flex items-start justify-between">
-                                      <div>
-                                        <p className="font-medium">
-                                          {theme.label}
-                                        </p>
-                                        <p className="text-muted-foreground text-sm">
-                                          {theme.description}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </label>
-                                </div>
-                              ))}
-                            </RadioGroup>
+                              onValueChange={field.onChange}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
-                    {websiteForm.watch("themeOption") === "custom" && (
-                      <FormField
-                        control={websiteForm.control}
-                        name="customTheme"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Custom Theme Classes</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="bg-gradient-to-r from-cyan-500 to-blue-500"
-                                {...field}
-                                value={field.value ?? ""}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Enter Tailwind CSS classes for your custom theme
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
                   </div>
 
                   <Button type="submit" disabled={websiteMutation.isPending}>
