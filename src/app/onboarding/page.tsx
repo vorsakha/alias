@@ -124,8 +124,16 @@ export default function OnboardingPage() {
 
   if (sessionLoading || checkingProfile) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></div>
+      <div className="relative min-h-screen overflow-hidden bg-black text-white">
+        <div className="absolute inset-0 bg-gradient-to-br from-black via-purple-900/20 to-black" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
+
+        <div className="relative z-10 flex h-screen items-center justify-center">
+          <div className="flex items-center space-x-2">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-purple-400 border-t-transparent"></div>
+            <span className="text-white">Loading...</span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -135,203 +143,226 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="container mx-auto py-10">
-      <Card className="mx-auto max-w-3xl">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl">
-            Set Up Your Creator Profile
-          </CardTitle>
-          <CardDescription>
-            Complete your profile to start receiving tips and payments with
-            Bitcoin Lightning
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...profileForm}>
-            <form
-              onSubmit={profileForm.handleSubmit(onSubmit)}
-              className="space-y-6"
-            >
-              <div className="mb-6 flex flex-col items-center">
-                <Avatar className="mb-4 h-24 w-24">
-                  <AvatarImage src={profileForm.watch("avatarUrl") ?? ""} />
-                  <AvatarFallback>
-                    {profileForm
-                      .watch("displayName")
-                      ?.substring(0, 2)
-                      .toUpperCase() || "?"}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
+    <div className="relative min-h-screen overflow-hidden bg-black text-white">
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-purple-900/20 to-black" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
 
-              <FormField
-                control={profileForm.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input placeholder="yourusername" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Choose a unique username for your profile URL. This cannot
-                      be changed later.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.02)_1px,transparent_1px)] bg-[size:72px_72px]" />
 
-              <FormField
-                control={profileForm.control}
-                name="displayName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Display Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Your display name" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      This is your public display name.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={profileForm.control}
-                name="bio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bio</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Tell us about yourself"
-                        className="min-h-32"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      A short bio about yourself. This will be displayed on your
-                      profile.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={profileForm.control}
-                name="avatarUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Avatar URL</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="https://example.com/avatar.jpg"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      A URL to your profile image.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={profileForm.control}
-                name="lightningAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Lightning Address</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="your@lightning.address"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Your Lightning address for receiving payments (e.g.
-                      you@getalby.com).
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-medium">Profile Theme</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Choose a theme for your profile page.
-                  </p>
-                </div>
-
-                <div
-                  className={`${watch("themeOption")} mb-6 flex h-32 items-center justify-center rounded-lg border p-4 shadow-sm`}
-                >
-                  <div className="text-center">
-                    <p className="font-semibold text-white drop-shadow-md">
-                      Theme Preview
-                    </p>
-                  </div>
+      <div className="relative z-10 container mx-auto max-w-4xl py-10">
+        <Card className="mx-auto max-w-3xl border-white/10 bg-white/5 backdrop-blur-sm">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl text-white">
+              Set Up Your Creator Profile
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              Complete your profile to start receiving tips and payments with
+              Bitcoin Lightning
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...profileForm}>
+              <form
+                onSubmit={profileForm.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
+                <div className="mb-6 flex flex-col items-center">
+                  <Avatar className="mb-4 h-24 w-24 border-2 border-white/20">
+                    <AvatarImage src={profileForm.watch("avatarUrl") ?? ""} />
+                    <AvatarFallback className="bg-purple-600/20 text-white">
+                      {profileForm
+                        .watch("displayName")
+                        ?.substring(0, 2)
+                        .toUpperCase() || "?"}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
 
                 <FormField
                   control={profileForm.control}
-                  name="themeOption"
+                  name="username"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel className="text-white">Username</FormLabel>
                       <FormControl>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-                          {themeOptions.map((theme) => (
-                            <div
-                              key={theme.value}
-                              className={`cursor-pointer rounded-lg border p-4 ${
-                                field.value === theme.value
-                                  ? "border-primary"
-                                  : "border-gray-200"
-                              }`}
-                              onClick={() => field.onChange(theme.value)}
-                            >
-                              <div
-                                className={`${theme.preview} mb-2 h-16 w-full rounded-md`}
-                              ></div>
-                              <p className="font-medium">{theme.label}</p>
-                              <p className="text-muted-foreground text-sm">
-                                {theme.description}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+                        <Input
+                          placeholder="yourusername"
+                          {...field}
+                          className="border-white/20 bg-white/10 text-white placeholder-gray-400 focus:border-purple-400"
+                        />
                       </FormControl>
+                      <FormDescription className="text-gray-400">
+                        Choose a unique username for your profile URL. This
+                        cannot be changed later.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
 
-              <div className="pt-4">
-                <Button
-                  type="submit"
-                  className="w-full"
-                  size="lg"
-                  disabled={createProfileMutation.isPending}
-                >
-                  {createProfileMutation.isPending
-                    ? "Creating Profile..."
-                    : "Create My Profile"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                <FormField
+                  control={profileForm.control}
+                  name="displayName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Display Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Your display name"
+                          {...field}
+                          className="border-white/20 bg-white/10 text-white placeholder-gray-400 focus:border-purple-400"
+                        />
+                      </FormControl>
+                      <FormDescription className="text-gray-400">
+                        This is your public display name.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={profileForm.control}
+                  name="bio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Bio</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Tell us about yourself"
+                          className="min-h-32 border-white/20 bg-white/10 text-white placeholder-gray-400 focus:border-purple-400"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-gray-400">
+                        A short bio about yourself. This will be displayed on
+                        your profile.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={profileForm.control}
+                  name="avatarUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Avatar URL</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://example.com/avatar.jpg"
+                          {...field}
+                          value={field.value ?? ""}
+                          className="border-white/20 bg-white/10 text-white placeholder-gray-400 focus:border-purple-400"
+                        />
+                      </FormControl>
+                      <FormDescription className="text-gray-400">
+                        A URL to your profile image.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={profileForm.control}
+                  name="lightningAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">
+                        Lightning Address
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="your@lightning.address"
+                          {...field}
+                          value={field.value ?? ""}
+                          className="border-white/20 bg-white/10 text-white placeholder-gray-400 focus:border-orange-400"
+                        />
+                      </FormControl>
+                      <FormDescription className="text-gray-400">
+                        Your Lightning address for receiving payments (e.g.
+                        you@getalby.com).
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-white">
+                      Profile Theme
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      Choose a theme for your profile page.
+                    </p>
+                  </div>
+
+                  <div
+                    className={`${watch("themeOption")} mb-6 flex h-32 items-center justify-center rounded-lg border border-white/20 p-4 shadow-sm`}
+                  >
+                    <div className="text-center">
+                      <p className="font-semibold text-white drop-shadow-md">
+                        Theme Preview
+                      </p>
+                    </div>
+                  </div>
+
+                  <FormField
+                    control={profileForm.control}
+                    name="themeOption"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                            {themeOptions.map((theme) => (
+                              <div
+                                key={theme.value}
+                                className={`cursor-pointer rounded-lg border p-4 transition-all hover:shadow-lg ${
+                                  field.value === theme.value
+                                    ? "border-purple-400 bg-purple-500/10"
+                                    : "border-white/20 bg-white/5 hover:border-white/30"
+                                }`}
+                                onClick={() => field.onChange(theme.value)}
+                              >
+                                <div
+                                  className={`${theme.preview} mb-2 h-16 w-full rounded-md`}
+                                ></div>
+                                <p className="font-medium text-white">
+                                  {theme.label}
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                  {theme.description}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="pt-4">
+                  <Button
+                    type="submit"
+                    className="w-full bg-white font-semibold text-black hover:bg-gray-100"
+                    size="lg"
+                    disabled={createProfileMutation.isPending}
+                  >
+                    {createProfileMutation.isPending
+                      ? "Creating Profile..."
+                      : "Create My Profile"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

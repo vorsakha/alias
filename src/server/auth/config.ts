@@ -15,15 +15,8 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      // ...other properties
-      // role: UserRole;
     } & DefaultSession["user"];
   }
-
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
 }
 
 /**
@@ -57,22 +50,17 @@ export const authConfig = {
       },
     }),
     signIn: async ({ user, account, profile }) => {
-      // Only proceed for Discord authentication
       if (account?.provider !== "discord") return true;
 
       try {
-        // Make sure we have a user id
         if (!user.id) return true;
 
-        // Check if user exists
         const existingUser = await db.user.findUnique({
           where: { id: user.id },
           include: { creator: true },
         });
 
-        // If user exists but doesn't have a creator profile, create one
         if (existingUser && !existingUser.creator) {
-          // Create a creator profile for the user
           const emailPrefix = profile?.email?.split("@")[0];
           const username = emailPrefix ?? `user${user.id.substring(0, 8)}`;
 
@@ -85,16 +73,12 @@ export const authConfig = {
             },
           });
 
-          // Create empty wallets record
           await db.wallets.create({
             data: {
               creatorId: creator.id,
             },
           });
         }
-
-        // If this is a new user, the PrismaAdapter will create the User record
-        // We don't need to do anything special here as the adapter handles it
 
         return true;
       } catch (error) {
