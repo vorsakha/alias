@@ -13,7 +13,7 @@ export const PageContainer: React.FC<PageContainerProps> = ({
 
   return (
     <div
-      className={`relative mx-auto my-8 w-full overflow-hidden border ${theme.containerMaxWidth} ${containerClasses} sm:p-8`}
+      className={`relative mx-auto my-8 w-full overflow-hidden border md:min-w-[350px] ${theme.containerMaxWidth} ${containerClasses} sm:p-8`}
     >
       <div className="relative z-10">{children}</div>
     </div>
