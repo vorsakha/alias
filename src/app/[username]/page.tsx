@@ -139,7 +139,7 @@ export default async function CreatorProfilePage({ params }: PageProps) {
       )}
 
       {creator.links.length > 0 ? (
-        <div className="mt-2 flex w-full flex-col gap-4">
+        <div className="mt-4 flex w-full flex-col gap-4">
           {creator.links.map((link) => (
             <LinkItem key={link.id} link={link} theme={theme} />
           ))}
