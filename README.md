@@ -1,4 +1,4 @@
-# Nostr Links ⚡🔴
+# Nostr Links
 
 **Nostr Links** is a **fully decentralized** profile platform for **bitcoiners** powered by **Nostr**. No servers, no databases, no centralized control - your data lives on the Nostr network where you own it completely.
 
