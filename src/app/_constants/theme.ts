@@ -49,6 +49,7 @@ export interface ThemeConfig {
     avatar?: string;
     links?: string;
     button?: string;
+    dialog?: string;
   };
 }
 
@@ -87,6 +88,7 @@ export const themePresets: ThemeConfig[] = [
       links:
         "border-neutral-700/30 hover:border-neutral-600/50 hover:bg-neutral-700/40",
       button: "bg-neutral-50 hover:bg-neutral-200 text-neutral-900 font-medium",
+      dialog: "border border-neutral-700/50 shadow-2xl shadow-black/60",
     },
   },
   {
@@ -122,6 +124,7 @@ export const themePresets: ThemeConfig[] = [
       links:
         "border-neutral-200/60 hover:border-neutral-300/80 hover:bg-neutral-50/60",
       button: "bg-neutral-900 hover:bg-neutral-800 text-white font-medium",
+      dialog: "border border-neutral-200/80 shadow-xl shadow-neutral-200/60",
     },
   },
   {
@@ -157,6 +160,7 @@ export const themePresets: ThemeConfig[] = [
       links:
         "border-stone-200/60 hover:border-stone-300/80 hover:bg-stone-50/60",
       button: "bg-amber-600 hover:bg-amber-700 text-white font-medium",
+      dialog: "border border-stone-200/80 shadow-xl shadow-stone-200/50",
     },
   },
   {
@@ -198,6 +202,8 @@ export const themePresets: ThemeConfig[] = [
         "border-cyan-400/20 hover:border-cyan-300/40 bg-gradient-to-r from-slate-800/60 to-slate-700/60 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]",
       button:
         "bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-900 font-bold shadow-[0_0_25px_rgba(34,211,238,0.4)]",
+      dialog:
+        "border-2 border-cyan-400/30 shadow-[0_0_50px_rgba(34,211,238,0.25)] bg-gradient-to-br from-slate-800/90 to-slate-900/90",
     },
   },
   {
@@ -237,6 +243,8 @@ export const themePresets: ThemeConfig[] = [
         "bg-white/15 hover:bg-white/25 border-white/25 hover:border-white/40",
       button:
         "bg-white/25 hover:bg-white/35 text-white border-white/30 font-bold backdrop-blur-sm",
+      dialog:
+        "border border-white/30 shadow-2xl shadow-black/40 bg-white/20 backdrop-blur-xl",
     },
   },
   {
@@ -315,6 +323,7 @@ export const themePresets: ThemeConfig[] = [
       container: "border border-slate-200/80",
       links: "border-slate-200/60 hover:border-blue-200/80 hover:bg-blue-50/60",
       button: "bg-blue-600 hover:bg-blue-700 text-white font-semibold",
+      dialog: "border border-slate-200/80 shadow-xl shadow-slate-200/60",
     },
   },
   {
@@ -692,7 +701,7 @@ export function getThemesByCategory(
 
 export function applyThemeClasses(
   theme: ThemeConfig,
-  element: "container" | "header" | "avatar" | "links" | "button",
+  element: "container" | "header" | "avatar" | "links" | "button" | "dialog",
 ): string {
   const customClass = theme.customClasses?.[element];
 
@@ -707,6 +716,8 @@ export function applyThemeClasses(
       return `${theme.cardBg} ${theme.borderColor} ${theme.hoverEffects} ${theme.borderRadius} ${customClass ?? ""}`.trim();
     case "button":
       return `${theme.accentColor} ${theme.hoverEffects} ${customClass ?? ""}`.trim();
+    case "dialog":
+      return `${theme.cardBg} ${theme.borderColor} ${theme.shadow} ${theme.backdropBlur} ${theme.borderRadius} ${customClass ?? ""}`.trim();
     default:
       return "";
   }

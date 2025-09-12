@@ -3,12 +3,14 @@ import "@/styles/globals.css";
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 
-import { TRPCReactProvider } from "@/trpc/react";
+import { Providers } from "@/components/providers";
+import { NavigationDrawer } from "@/components/navigation-drawer";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "Satsip",
-  description: "Create your Links profile and receive crypto tips easily",
+  title: "Nostr Links",
+  description:
+    "Decentralized profiles powered by Nostr - own your data, own your identity",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
@@ -23,7 +25,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable}`}>
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <Providers>
+          <NavigationDrawer />
+          {children}
+        </Providers>
         <Toaster />
       </body>
     </html>
