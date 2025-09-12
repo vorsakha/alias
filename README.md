@@ -91,7 +91,7 @@ Visit `http://localhost:3000` to see your decentralized app running!
 - Support for various link types and wallet addresses
 
 ### 5. **Share Your Profile**
-- Your profile URL: `yoursite.com/{nprofile}`
+- Your profile URL: `this.site/{nprofile}`
 - NIP-05 identifier support for human-readable addresses
 - Share on social media, embed in websites
 
