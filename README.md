@@ -12,7 +12,6 @@ Think of it as a **decentralized Linktree** where bitcoiners can showcase their 
 - 🎨 **Beautiful Profiles**: 20+ customizable themes across 6 categories
 - ⚡ **Lightning Zaps**: Instant Bitcoin payments via Lightning Network
 - 🔗 **Link Management**: Drag-and-drop link organization with rich previews
-- 📱 **Mobile Ready**: QR codes for easy Lightning payments
 - 🛡️ **Censorship Resistant**: Your content can't be taken down
 - 🎭 **Theme Customization**: Minimal, Vibrant, Professional, Creative, Retro, and Futuristic themes
 - 🔄 **Real-time Updates**: Live profile updates across all connected clients
@@ -95,7 +94,6 @@ Visit `http://localhost:3000` to see your decentralized app running!
 - Your profile URL: `yoursite.com/{nprofile}`
 - NIP-05 identifier support for human-readable addresses
 - Share on social media, embed in websites
-- QR codes for easy mobile access
 
 ### 6. **Receive Lightning Zaps**
 - Fellow bitcoiners can zap you with predefined amounts (21, 100, 500, 1000, 2100 sats)
@@ -175,27 +173,3 @@ The application includes a comprehensive theme system with:
 - [Lightning Network](https://lightning.network) - Bitcoin's layer 2 scaling solution
 - [NDK Documentation](https://github.com/nostr-dev-kit/ndk) - Nostr Development Kit
 - [Nostr Tools](https://github.com/nbd-wtf/nostr-tools) - Nostr protocol utilities
-
-## 🎨 Theme Categories
-
-### Minimal
-Clean, simple designs focused on content and readability.
-
-### Vibrant
-Bold, colorful themes with high contrast and energy.
-
-### Professional
-Corporate-friendly designs suitable for business profiles.
-
-### Creative
-Artistic themes with unique visual elements and creative layouts.
-
-### Retro
-Nostalgic designs inspired by past decades and vintage aesthetics.
-
-### Futuristic
-Advanced themes with holographic effects, particles, and cutting-edge visuals.
-
----
-
-**Nostr Links** - Your decentralized profile, powered by Nostr. Own your data, own your identity, own your future. 🔴⚡
