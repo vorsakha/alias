@@ -1,15 +1,8 @@
 import type NDK from "@nostr-dev-kit/ndk";
-import type {
-  ProfileData,
-  WalletData,
-  LinkData,
-  ThemeData,
-  ZapData,
-} from "./events";
+import type { ProfileData, LinkData, ThemeData, ZapData } from "./events";
 import {
   EVENT_KINDS,
   parseProfileContent,
-  parseWalletContent,
   parseLinkContent,
   parseThemeContent,
 } from "./events";
@@ -62,56 +55,6 @@ export class NostrQueries {
     }
   }
 
-  async getProfileDetails(
-    pubkey: string,
-  ): Promise<Record<string, unknown> | null> {
-    try {
-      const events = await this.fetchEventsWithTimeout({
-        kinds: [EVENT_KINDS.PROFILE_DETAILS],
-        authors: [pubkey],
-        limit: 1,
-      });
-
-      const event = Array.from(events)[0];
-      if (!event || typeof event !== "object" || !("content" in event))
-        return null;
-
-      return JSON.parse((event as { content: string }).content) as Record<
-        string,
-        unknown
-      >;
-    } catch (error) {
-      console.error("Failed to fetch profile details:", error);
-
-      throw new Error(
-        `Failed to fetch profile details: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
-  }
-
-  async getWallets(pubkey: string): Promise<WalletData | null> {
-    try {
-      const events = await this.fetchEventsWithTimeout({
-        kinds: [EVENT_KINDS.WALLETS],
-        authors: [pubkey],
-        "#d": ["wallets"],
-        limit: 1,
-      });
-
-      const event = Array.from(events)[0];
-      if (!event || typeof event !== "object" || !("content" in event))
-        return null;
-
-      return parseWalletContent((event as { content: string }).content);
-    } catch (error) {
-      console.error("Failed to fetch wallets:", error);
-
-      throw new Error(
-        `Failed to fetch wallets: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
-  }
-
   async getLinks(pubkey: string): Promise<LinkData[]> {
     try {
       const events = await this.fetchEventsWithTimeout({
@@ -130,29 +73,6 @@ export class NostrQueries {
 
       throw new Error(
         `Failed to fetch links: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
-  }
-
-  async getLink(pubkey: string, linkId: string): Promise<LinkData | null> {
-    try {
-      const events = await this.fetchEventsWithTimeout({
-        kinds: [EVENT_KINDS.LINKS],
-        authors: [pubkey],
-        "#d": [`link-${linkId}`],
-        limit: 1,
-      });
-
-      const event = Array.from(events)[0];
-      if (!event || typeof event !== "object" || !("content" in event))
-        return null;
-
-      return parseLinkContent((event as { content: string }).content);
-    } catch (error) {
-      console.error("Failed to fetch link:", error);
-
-      throw new Error(
-        `Failed to fetch link: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }
@@ -200,26 +120,6 @@ export class NostrQueries {
     }
   }
 
-  async publishWallets(walletData: WalletData): Promise<boolean> {
-    try {
-      const NDKEvent = (await import("@nostr-dev-kit/ndk")).NDKEvent;
-      const event = new NDKEvent(this.ndk, {
-        kind: EVENT_KINDS.WALLETS,
-        content: JSON.stringify(walletData),
-        tags: [["d", "wallets"]],
-      });
-
-      await event.publish();
-      toast.success("Wallet information updated successfully!");
-      return true;
-    } catch (error) {
-      console.error("Failed to publish wallets:", error);
-      toast.error("Failed to update wallet information. Please try again.");
-
-      return false;
-    }
-  }
-
   async publishLink(linkData: LinkData): Promise<boolean> {
     try {
       const NDKEvent = (await import("@nostr-dev-kit/ndk")).NDKEvent;
@@ -260,84 +160,6 @@ export class NostrQueries {
 
       return false;
     }
-  }
-
-  async deleteLink(linkId: string): Promise<boolean> {
-    try {
-      const NDKEvent = (await import("@nostr-dev-kit/ndk")).NDKEvent;
-      const event = new NDKEvent(this.ndk, {
-        kind: 5, // Deletion event
-        content: "",
-        tags: [["e", linkId]], // Reference the event to delete
-      });
-
-      await event.publish();
-      toast.success("Link deleted successfully!");
-
-      return true;
-    } catch (error) {
-      console.error("Failed to delete link:", error);
-      toast.error("Failed to delete link. Please try again.");
-
-      return false;
-    }
-  }
-
-  // Subscription methods for real-time updates
-  subscribeToProfile(
-    pubkey: string,
-    callback: (profile: ProfileData | null) => void,
-  ) {
-    const subscription = this.ndk.subscribe({
-      kinds: [EVENT_KINDS.PROFILE],
-      authors: [pubkey],
-    });
-
-    subscription.on("event", (event: unknown) => {
-      if (event && typeof event === "object" && "content" in event) {
-        const profile = parseProfileContent(
-          (event as { content: string }).content,
-        );
-        callback(profile);
-      }
-    });
-
-    return subscription;
-  }
-
-  subscribeToWallets(
-    pubkey: string,
-    callback: (wallets: WalletData | null) => void,
-  ) {
-    const subscription = this.ndk.subscribe({
-      kinds: [EVENT_KINDS.WALLETS],
-      authors: [pubkey],
-      "#d": ["wallets"],
-    });
-
-    subscription.on("event", (event: unknown) => {
-      if (event && typeof event === "object" && "content" in event) {
-        const wallets = parseWalletContent(
-          (event as { content: string }).content,
-        );
-        callback(wallets);
-      }
-    });
-
-    return subscription;
-  }
-
-  subscribeToLinks(pubkey: string, callback: (links: LinkData[]) => void) {
-    const subscription = this.ndk.subscribe({
-      kinds: [EVENT_KINDS.LINKS],
-      authors: [pubkey],
-    });
-
-    subscription.on("event", () => {
-      void this.getLinks(pubkey).then(callback);
-    });
-
-    return subscription;
   }
 
   async createZapRequest(zapData: ZapData): Promise<string> {
@@ -485,34 +307,6 @@ export class NostrQueries {
       }
 
       throw new Error("Failed to process Lightning payment. Please try again.");
-    }
-  }
-
-  async publishZapReceipt(
-    zapRequestId: string,
-    recipientPubkey: string,
-    bolt11Invoice: string,
-  ): Promise<boolean> {
-    try {
-      const NDKEvent = (await import("@nostr-dev-kit/ndk")).NDKEvent;
-
-      const event = new NDKEvent(this.ndk, {
-        kind: EVENT_KINDS.ZAP_RECEIPT,
-        content: "",
-        tags: [
-          ["p", recipientPubkey],
-          ["e", zapRequestId],
-          ["bolt11", bolt11Invoice],
-          ["description", "Zap receipt"],
-        ],
-      });
-
-      await event.publish();
-      return true;
-    } catch (error) {
-      console.error("Failed to publish zap receipt:", error);
-
-      return false;
     }
   }
 }

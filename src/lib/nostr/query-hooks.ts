@@ -2,13 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNostr } from "./nprofile-provider";
-import type {
-  ProfileData,
-  WalletData,
-  LinkData,
-  ThemeData,
-  ZapData,
-} from "./events";
+import type { ProfileData, LinkData, ThemeData, ZapData } from "./events";
 
 export const nostrQueryKeys = {
   all: ["nostr"] as const,
@@ -36,34 +30,6 @@ export function useProfile(pubkey: string) {
   });
 }
 
-export function useProfileDetails(pubkey: string) {
-  const { queries, isConnected } = useNostr();
-
-  return useQuery({
-    queryKey: [...nostrQueryKeys.profile(pubkey), "details"],
-    queryFn: () => {
-      if (!queries) throw new Error("No queries available");
-      return queries.getProfileDetails(pubkey);
-    },
-    enabled: !!queries && !!pubkey && isConnected,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useWallets(pubkey: string) {
-  const { queries, isConnected } = useNostr();
-
-  return useQuery({
-    queryKey: nostrQueryKeys.wallet(pubkey),
-    queryFn: () => {
-      if (!queries) throw new Error("No queries available");
-      return queries.getWallets(pubkey);
-    },
-    enabled: !!queries && !!pubkey && isConnected,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
 export function useLinks(pubkey: string) {
   const { queries, isConnected } = useNostr();
 
@@ -78,21 +44,6 @@ export function useLinks(pubkey: string) {
   });
 }
 
-export function useLink(pubkey: string, linkId: string) {
-  const { queries, isConnected } = useNostr();
-
-  return useQuery({
-    queryKey: [...nostrQueryKeys.userLinks(pubkey), linkId],
-    queryFn: () => {
-      if (!queries) throw new Error("No queries available");
-      return queries.getLink(pubkey, linkId);
-    },
-    enabled: !!queries && !!pubkey && !!linkId && isConnected,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-// Theme Hooks
 export function useTheme(pubkey: string) {
   const { queries, isConnected } = useNostr();
 
@@ -141,23 +92,6 @@ export function usePublishProfile() {
   });
 }
 
-export function usePublishWallets() {
-  const { queries } = useNostr();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (walletData: WalletData) => {
-      if (!queries) throw new Error("No queries available");
-      return queries.publishWallets(walletData);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: nostrQueryKeys.wallets(),
-      });
-    },
-  });
-}
-
 export function usePublishLink() {
   const { queries } = useNostr();
   const queryClient = useQueryClient();
@@ -170,23 +104,6 @@ export function usePublishLink() {
     onSuccess: (_, variables) => {
       void queryClient.invalidateQueries({
         queryKey: nostrQueryKeys.userLinks(variables.pubkey),
-      });
-    },
-  });
-}
-
-export function useDeleteLink() {
-  const { queries } = useNostr();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (linkId: string) => {
-      if (!queries) throw new Error("No queries available");
-      return queries.deleteLink(linkId);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: nostrQueryKeys.links(),
       });
     },
   });
@@ -235,29 +152,6 @@ export function useSendZap() {
     }) => {
       if (!queries) throw new Error("No queries available");
       return queries.sendZap(lightningAddress, amount, zapRequest);
-    },
-  });
-}
-
-export function usePublishZapReceipt() {
-  const { queries } = useNostr();
-
-  return useMutation({
-    mutationFn: ({
-      zapRequestId,
-      recipientPubkey,
-      bolt11Invoice,
-    }: {
-      zapRequestId: string;
-      recipientPubkey: string;
-      bolt11Invoice: string;
-    }) => {
-      if (!queries) throw new Error("No queries available");
-      return queries.publishZapReceipt(
-        zapRequestId,
-        recipientPubkey,
-        bolt11Invoice,
-      );
     },
   });
 }

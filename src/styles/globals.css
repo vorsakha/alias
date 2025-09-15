@@ -143,34 +143,6 @@
 }
 
 @layer utilities {
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  .animate-fade-in-up {
-    animation: fadeInUp 0.8s ease-out forwards;
-  }
-
-  .max-w-580 {
-    max-width: 580px;
-  }
-
-  .glass {
-    @apply bg-white/5 backdrop-blur-sm border border-white/10;
-  }
-  
-  .glass-hover {
-    @apply hover:bg-white/10 hover:border-white/20;
-  }
-
-  .gradient-purple {
-    background: linear-gradient(135deg, rgb(139, 92, 246) 0%, rgb(124, 58, 237) 100%);
-  }
-  
-  .gradient-orange {
-    background: linear-gradient(135deg, rgb(251, 146, 60) 0%, rgb(249, 115, 22) 100%);
-  }
-
   @keyframes float {
     0% {
       transform: translateY(0px);
@@ -210,27 +182,5 @@
     100% {
       transform: translateY(100vh);
     }
-  }
-
-  @keyframes glow-pulse {
-    0%, 100% {
-      opacity: 0.5;
-    }
-    50% {
-      opacity: 1;
-    }
-  }
-
-  @keyframes button-glow {
-    0%, 100% {
-      box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
-    }
-    50% {
-      box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
-    }
-  }
-
-  .animate-button-glow {
-    animation: button-glow 2s ease-in-out infinite;
   }
 }

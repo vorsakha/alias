@@ -89,33 +89,6 @@ export class NostrSessionStorage {
     }
   }
 
-  static updateNProfileData(nprofileData?: NProfileData): void {
-    const session = this.getSession();
-
-    if (session) {
-      this.saveSession({
-        ...session,
-        nprofileData,
-      });
-    }
-  }
-
-  static updateRelayUrls(relayUrls: string[]): void {
-    const session = this.getSession();
-
-    if (session) {
-      this.saveSession({
-        ...session,
-        relayUrls,
-      });
-    }
-  }
-
-  static isSessionValid(): boolean {
-    const session = this.getSession();
-    return Boolean(session?.hasSigner);
-  }
-
   static shouldAutoReconnect(): boolean {
     const session = this.getSession();
     if (!session) return false;

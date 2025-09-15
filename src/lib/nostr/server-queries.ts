@@ -17,33 +17,6 @@ function createServerNDK(relays?: string[]): NDK {
   });
 }
 
-export async function getServerProfile(
-  pubkey: string,
-): Promise<ProfileData | null> {
-  const ndk = createServerNDK();
-
-  try {
-    await ndk.connect();
-
-    const events = await ndk.fetchEvents({
-      kinds: [EVENT_KINDS.PROFILE],
-      authors: [pubkey],
-      limit: 1,
-    });
-
-    const event = Array.from(events)[0];
-    if (!event || typeof event !== "object" || !("content" in event)) {
-      return null;
-    }
-
-    return parseProfileContent((event as { content: string }).content);
-  } catch (error) {
-    console.error("Failed to fetch profile for metadata:", error);
-
-    return null;
-  }
-}
-
 export async function getServerProfileFromNProfile(
   nprofile: string,
 ): Promise<ProfileData | null> {
